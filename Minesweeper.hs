@@ -4,7 +4,7 @@ module Minesweeper where
 -- ghci
 -- :load Minesweeper
 
-data State = State [Action]  -- internal_state available_actions
+data State = State InternalState
          deriving (Ord, Eq)
 
 data Result = EndOfGame Double State    -- end of game, value, starting state
@@ -19,6 +19,7 @@ type Player = State -> Action
 
 newtype Action = Action (Int, Int)
 	deriving (Eq, Ord)
+type InternalState = [[Int]]
 	
 -- Game board Enumeration
 -- 0 - empty
