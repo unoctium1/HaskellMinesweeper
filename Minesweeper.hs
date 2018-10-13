@@ -4,8 +4,8 @@ module Minesweeper where
 -- ghci
 -- :load Minesweeper
 
-data State = State InternalState
-         deriving (Ord, Eq)
+data State = State InternalState        -- the state of the game is the 
+         deriving (Ord, Eq)             -- internal state of the game
 
 data Result = EndOfGame Double State    -- end of game, value, starting state
             | ContinueGame State        -- continue with new state
