@@ -72,6 +72,11 @@ minesweeper (Action (x,y,c)) (State (grid))
 --TODO: Flesh out the win and loss conditions for the game, for example
 -- we should loose if we click on a mine or run out of moves/time
 
+--TODO: Create method for generating action triples from user input,
+-- either keystrokes or mouse klicks
+
+--TODO: Create a graphical representation of the mine grid
+
 -- we win if all the 3's are gone
 -- note that this win condition assumes we cannot incorrectly remove 3's
 
