@@ -17,7 +17,7 @@ type Player = State -> Action
 
 -----------------Minesweeper Game --------------------------------------
 
-newtype Action = Action (Int, Int)
+newtype Action = Action (Int, Int, Int)
 	deriving (Eq, Ord)
 type InternalState = [[Int]]
 	
@@ -52,3 +52,16 @@ find_replace_helper [] x c = []
 find_replace_helper (first:rest) x c
 	|x == 1 = c : rest
 	|otherwise = first : (find_replace_helper rest (x-1) c)
+	
+minesweeper_start = State small_grid
+
+minesweeper :: Game
+minesweeper (Action (x,y,c)) (State (grid))
+	| win (find_replace grid x y c)	= EndOfGame 1 minesweeper_start
+	|otherwise 			  			= ContinueGame (State(find_replace grid x y c))
+
+win :: [[Int]] -> Bool
+win [] = True
+win (first:rest) 
+	|elem 3 first = False
+	|otherwise = True && win rest
