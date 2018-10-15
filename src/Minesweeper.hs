@@ -12,7 +12,7 @@ someFunc :: IO ()
 someFunc = putStrLn "someFunc"
 
 data State = State InternalState        -- the state of the game is the
-         deriving (Ord, Eq)             -- internal state of the game
+         deriving (Ord, Eq)--, Show)             -- internal state of the game
 
 data Result = EndOfGame Double State    -- end of game, value, starting state
             | ContinueGame State        -- continue with new state
@@ -39,21 +39,13 @@ type InternalState = [[Int]]
 instance Show State where
     show (State ins) = show (showhelper ins)
 
-showhelper :: [[Int]] -> [[Int]] -- converts internal state to concealed external state
+showhelper :: [[Int]] -> [[Char]] -- converts internal state to concealed external state
 showhelper [] = []
 showhelper (first:rest) = (map
-    (\ a -> if a == 0 || a == 1 then 0  -- not clicked
-        else if a == 2 || a == 4 then 1 -- flagged
-        else 2)                         -- clicked
+    (\ a -> if a == 0 || a == 1 then  'B'  -- not clicked
+        else if a == 2 || a == 4 then 'F' -- flagged
+        else '2')                         -- clicked (replace with count bombs once implemented)
     first):showhelper rest
-
--- Game board Enumeration
--- 0 - empty
--- 1 - empty, flagged
--- 2 - empty, cleared
--- 3 - bomb
--- 4 - bomb, flagged
--- 5 - bomb, cleared. -- use for identifying loss conditions
 
 -- the game is over when all the 1's are replaced with 4's and there are
 -- no more 2's
