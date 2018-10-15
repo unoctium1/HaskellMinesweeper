@@ -22,6 +22,7 @@ description:         Please see the README on GitHub at <https://github.com/unoc
 dependencies:
 - base >= 4.7 && < 5
 - gtk
+- random
 
 library:
   source-dirs: src
