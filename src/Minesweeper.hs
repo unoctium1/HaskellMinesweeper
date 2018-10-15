@@ -58,7 +58,7 @@ bombCleared = 5         -- mine, cleared (loss condition)
 
 -- a small grid for testing purposes, feel free to design your own
 
-small_grid = [[0,0,0], [0,1,0],[0,0,0]]
+small_grid = [[0,1,0], [1,1,0],[0,0,0]]
 
 -- generates an state random state grid
 getgridext :: Int -> IO State
@@ -154,5 +154,14 @@ loss (first:rest)
     |elem 5 first = True
     |otherwise = loss rest
 
--- countbombs :: [[int]] -> (int, int) -> int
--- in order to display the grid, we need some function to count the bombs nearby a given space
+--in order to display the grid, we need some function to count the bombs nearby a given space
+countbombs :: [[Int]] -> (Int, Int) -> Int
+countbombs [] _ = 0
+countbombs (first:rest) (x, y) =
+    let
+        neighbors = [(x-1, y),(x+1, y),(x-1, y-1),(x, y-1),(x+1,y-1),(x-1, y+1),(x, y+1),(x+1,y+1)]
+        neighborsfilter = filter (\ (a,b) -> (a > 0) && (a <= (length first)) && b > 0 && (b <= (1+(length rest)))) neighbors
+        mappedneighbors = map (\ (a,b) -> find (first:rest) a b) neighborsfilter
+            
+    in
+        (foldr (\ a b -> a+b) 0 (filter (\ a -> a >= 4 || a == 1) mappedneighbors))
