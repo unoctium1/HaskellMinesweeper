@@ -154,5 +154,28 @@ loss (first:rest)
     |elem 5 first = True
     |otherwise = loss rest
 
--- countbombs :: [[int]] -> (int, int) -> int
+countbombs :: [[Int]] -> (Int, Int) -> Int
 -- in order to display the grid, we need some function to count the bombs nearby a given space
+countbombs grid (x,y) = (countThree grid (x,(y-1))) + (countAtX grid ((x-1),y)) + (countThree grid (x,(y+1))) + (countAtX grid ((+1),y))
+
+-- countAtX returns 1 if there is a bomb at (x,y) otherwise returns 0
+-- countAtX itself only operates on the grid, calling its helper on the correct row of the grid
+countAtX :: [[Int]] -> (Int, Int) -> Int
+countAtX [] (x, y)  = 0
+countAtX (first:rest) (x, y)
+	| (x < = 0) || (y <= 0) = 0
+    |y == 1 = (countAtXHelper first x)
+    |otherwise = 0 + (find_replace rest (x, (y-1)))
+
+-- helper function operates on a particular row of the grid, looking to see if there is a bomb
+-- at that x value
+countAtXHelper :: [Int] -> Int -> Int
+countAtXHelper [] x = 0
+countAtXHelper (first:rest) x
+    |(x == 1) && (first == 1) = 1
+    |otherwise = 0 + (countLeftHelper rest (x-1))
+
+-- to count the bombs above and below a particular x,y coordinate we need to examine 3 spaces in a row, 
+-- countThree does this for us by calling CountAtX three times
+countThree :: [[Int]] -> (Int, Int) -> Int    
+countThree grid (x,y) = (countAtX grid ((x-1), y)) + (countAtX grid ((x), y)) + (countAtX grid ((x+1), y))
