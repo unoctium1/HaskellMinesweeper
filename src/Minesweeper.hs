@@ -100,7 +100,21 @@ populateGrid grid gridSize numMines =
 		rg <- newStdGen
 		let randomX = head(randomRs (1,gridSize) rg)
 		let randomY = head(randomRs (1,gridSize) rg)
-		populateGrid (find_replace grid randomX randomY 1) gridSize (numMines - 1)
+		if (hasBomb grid randomX randomY)
+			then populateGrid grid gridSize numMines
+			else populateGrid (find_replace grid randomX randomY 1) gridSize (numMines - 1)
+			
+hasBomb :: InternalState -> Int -> Int -> Bool
+hasBomb [] x y = False
+hasBomb (first:rest) x y
+	|y == 1 = hasBombHelper first x
+	|otherwise = hasBomb rest x (y-1)
+
+hasBombHelper :: [Int] -> Int -> Bool
+hasBombHelper [] x = False
+hasBombHelper (first:rest) x
+	|x == 1 = if (first == 1) then True else False
+	|otherwise = hasBombHelper rest (x-1)
 		
 --test case
 test_grid = makeGrid 5 5
