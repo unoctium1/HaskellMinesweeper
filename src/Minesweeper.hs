@@ -77,6 +77,36 @@ getgrid x =
     do
         rg <- newStdGen
         return (gridmap x (take (x^2) (randomRs (0,1) rg)))
+        
+
+-- makeGrid takes a grid size and a number of mines and returns an internal state with randomly distributed mines    
+makeGrid :: Int -> Int -> IO InternalState
+makeGrid gridSize numMines = populateGrid (makeGridHelper gridSize gridSize) gridSize numMines
+
+makeGridHelper :: Int -> Int -> InternalState
+makeGridHelper 0 x = []
+makeGridHelper y x = (makeRow x) : (makeGridHelper (y-1) x)
+
+makeRow :: Int -> [Int]
+makeRow 0 = []
+makeRow x = 0 : makeRow (x-1)
+
+
+populateGrid :: InternalState -> Int -> Int -> IO InternalState
+populateGrid grid gridSize 0 = do
+	return grid
+populateGrid grid gridSize numMines = 
+	do 
+		rg <- newStdGen
+		let randomX = head(randomRs (1,gridSize) rg)
+		let randomY = head(randomRs (1,gridSize) rg)
+		populateGrid (find_replace grid randomX randomY 1) gridSize (numMines - 1)
+		
+--test case
+test_grid = makeGrid 5 5
+
+
+
 
 -- Helper for getgrid - given a specified grid size, and a list of numbers
 gridmap :: Int -> [Int] -> InternalState
