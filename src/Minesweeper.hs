@@ -1,12 +1,11 @@
 module Minesweeper
     ( someFunc,
-      getgrid,
-      getgridext,
       minesweeper
     ) where
 
 import System.Random
 import Data.Maybe
+import Data.Char
 
 someFunc :: IO ()
 someFunc = putStrLn "someFunc"
@@ -14,8 +13,8 @@ someFunc = putStrLn "someFunc"
 data State = State InternalState        -- the state of the game is the
          deriving (Ord, Eq)--, Show)             -- internal state of the game
 
-data Result = EndOfGame Double State    -- end of game, value, starting state
-            | ContinueGame State        -- continue with new state
+data Result = EndOfGame Double    -- end of game, value, starting state
+            | ContinueGame InternalState        -- continue with new state
          deriving (Eq, Show)
 
 type Game = UserAction -> State -> Result
@@ -58,26 +57,7 @@ bombCleared = 5         -- mine, cleared (loss condition)
 
 -- a small grid for testing purposes, feel free to design your own
 
-small_grid = [[0,0,0], [0,1,0],[0,0,0]]
-
--- generates an state random state grid
-getgridext :: Int -> IO State
-getgridext 0 =
-    do return (State [])
-getgridext x =
-    do
-        rg <- newStdGen
-        return (State (gridmap x (take (x^2) (randomRs (0,1) rg))))
-
--- generates an internal state random state grid (I'm not sure which of these we'll want to you, but definitely not both)
-getgrid :: Int -> IO InternalState
-getgrid 0 =
-    do return []
-getgrid x =
-    do
-        rg <- newStdGen
-        return (gridmap x (take (x^2) (randomRs (0,1) rg)))
-        
+small_grid = [[0,0,0], [0,1,0],[0,0,0]]     
 
 -- makeGrid takes a grid size and a number of mines and returns an internal state with randomly distributed mines    
 makeGrid :: Int -> Int -> IO InternalState
@@ -120,22 +100,6 @@ hasBombHelper (first:rest) x
 --test case
 test_grid = makeGrid 5 10
 
-
-
-
--- Helper for getgrid - given a specified grid size, and a list of numbers
-gridmap :: Int -> [Int] -> InternalState
-gridmap x lst = gridmaphelper x x lst
-
---splits lst into y chunks of x size
-gridmaphelper :: Int -> Int -> [Int] -> InternalState
-gridmaphelper x 0 _ = []
-gridmaphelper x y lst =
-    let
-        (fr,rst) = splitAt x lst
-    in
-        fr:(gridmaphelper x (y-1) rst)
-
 -- note: find_replace uses 1 indexing and (1,1) is the top left corner of the grid
 -- if 1 indexing proves really inconvenient we can reformat
 
@@ -158,13 +122,13 @@ find :: InternalState -> Int -> Int -> Int
 find lst x y = (lst!!(y-1))!!(x-1)
 
 
-minesweeper_start = State small_grid        -- initializes the game with the test grid
+minesweeper_start = play (makeGrid 5 10)       -- initializes the game with the test grid
 
 minesweeper :: Game
 minesweeper (UserAction (x,y,c)) (State (grid))
-    | to_replace == 5                           = EndOfGame 0 minesweeper_start
-    | win new_grid                              = EndOfGame 1 minesweeper_start    -- did we win?
-    | otherwise                                 = ContinueGame (State new_grid)
+    | to_replace == 5                           = EndOfGame 0
+    | win new_grid                              = EndOfGame 1    -- did we win?
+    | otherwise                                 = ContinueGame new_grid
         where
             init = find grid x y
             to_replace = if (init == 0 && c == LeftClick) then 3
@@ -175,6 +139,17 @@ minesweeper (UserAction (x,y,c)) (State (grid))
                          else if (init == 2 && c == LeftClick) then 0
                          else init
             new_grid = find_replace grid x y to_replace
+            
+play :: IO InternalState -> IO InternalState
+play internalGrid = 
+	do
+	putStrLn "  +───────────────────────+"
+	putStrLn "  | M I N E S W E E P E R |"
+	putStrLn "  +───────────────────────+"
+	internalGrid
+
+
+
 
 --TODO: Flesh out the win and loss conditions for the game, for example
 -- we should loose if we click on a mine or run out of moves/time
