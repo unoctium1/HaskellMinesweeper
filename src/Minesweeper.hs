@@ -1,15 +1,11 @@
 module Minesweeper
-    ( someFunc,
-      getgrid,
+    ( getgrid,
       getgridext,
       minesweeper
     ) where
 
 import System.Random
 import Data.Maybe
-
-someFunc :: IO ()
-someFunc = putStrLn "someFunc"
 
 data State = State InternalState        -- the state of the game is the
          deriving (Ord, Eq)--, Show)             -- internal state of the game
@@ -38,15 +34,7 @@ type InternalState = [[Int]]
 -- this ensures users do not have access to the internal state --i'm still on the fence about overriding show, might not be necessary
 instance Show State where
     show (State ins) = show (showhelper ins)
-
-showhelper :: [[Int]] -> [[Char]] -- converts internal state to concealed external state
-showhelper [] = []
-showhelper (first:rest) = (map
-    (\ a -> if a == 0 || a == 1 then  'B'  -- not clicked
-        else if a == 2 || a == 4 then 'F' -- flagged
-        else '2')                         -- clicked (replace with count bombs once implemented)
-    first):showhelper rest
-
+    
 -- the game is over when all the 1's are replaced with 4's and there are
 -- no more 2's
 empty = 0               -- empty space, uncleared
@@ -55,6 +43,14 @@ emptyFlagged = 2        -- empty space, flagged incorrectly
 emptyCleared = 3        -- empty space, cleared over the course of the game
 bombFlagged = 4         -- mine, flagged
 bombCleared = 5         -- mine, cleared (loss condition)
+
+showhelper :: [[Int]] -> [[Char]] -- converts internal state to concealed external state
+showhelper [] = []
+showhelper (first:rest) = (map
+    (\ a -> if a == empty || a == mine then  'B'               -- not clicked
+        else if a == emptyFlagged || a == bombFlagged then 'F' -- flagged
+        else '2')                                              -- clicked (replace with count bombs once implemented)
+    first):showhelper rest
 
 -- a small grid for testing purposes, feel free to design your own
 
@@ -69,7 +65,7 @@ getgridext x =
         rg <- newStdGen
         return (State (gridmap x (take (x^2) (randomRs (0,1) rg))))
 
--- generates an internal state random state grid (I'm not sure which of these we'll want to you, but definitely not both)
+-- generates an internal state random state grid (I'm not sure which of these we'll want to use, but definitely not both)
 getgrid :: Int -> IO InternalState
 getgrid 0 =
     do return []
@@ -117,17 +113,17 @@ minesweeper_start = State small_grid        -- initializes the game with the tes
 
 minesweeper :: Game
 minesweeper (UserAction (x,y,c)) (State (grid))
-    | to_replace == 5                           = EndOfGame 0 minesweeper_start
+    | to_replace == bombCleared                 = EndOfGame 0 minesweeper_start
     | win new_grid                              = EndOfGame 1 minesweeper_start    -- did we win?
     | otherwise                                 = ContinueGame (State new_grid)
         where
             init = find grid x y
-            to_replace = if (init == 0 && c == LeftClick) then 3
-                         else if (init == 0) then 2
-                         else if (init == 1 && c == LeftClick) then 5
-                         else if (init == 1) then 4
-                         else if (init == 4 && c == LeftClick) then 1
-                         else if (init == 2 && c == LeftClick) then 0
+            to_replace = if (init == empty && c == LeftClick) then emptyCleared
+                         else if (init == empty) then emptyFlagged
+                         else if (init == mine && c == LeftClick) then bombCleared
+                         else if (init == mine) then bombFlagged
+                         else if (init == bombFlagged && c == LeftClick) then mine
+                         else if (init == emptyFlagged && c == LeftClick) then empty
                          else init
             new_grid = find_replace grid x y to_replace
 
@@ -144,16 +140,29 @@ minesweeper (UserAction (x,y,c)) (State (grid))
 win :: [[Int]] -> Bool
 win [] = True
 win (first:rest)
-    |elem 1 first || elem 2 first = False
+    |elem mine first || elem bombFlagged first = False
     |otherwise = True && win rest
 
 --loss - if any space is a clicked mine, the game is a loss -- not actually needed
 loss :: [[Int]] -> Bool
 loss [] = False;
 loss (first:rest)
-    |elem 5 first = True
+    |elem bombCleared first = True
     |otherwise = loss rest
 
+-- I think this might be more efficient but I'm not 100% sure
+countbombsAlt :: [[Int]] -> (Int, Int) -> Int
+countbombsAlt [] _ = 0
+countbombsAlt (first:rest) (x, y) =
+    let
+        neighbors = [(x-1, y),(x+1, y),(x-1, y-1),(x, y-1),(x+1,y-1),(x-1, y+1),(x, y+1),(x+1,y+1)]
+        neighborsfilter = filter (\ (a,b) -> (a > 0) && (a <= (length first)) && b > 0 && (b <= (1+(length rest)))) neighbors
+        mappedneighbors = map (\ (a,b) -> find (first:rest) a b) neighborsfilter
+            
+    in
+        (length (filter (\ a -> a >= bombFlagged || a == mine) mappedneighbors))
+
+{-- This doesn't seem to compile
 countbombs :: [[Int]] -> (Int, Int) -> Int
 -- in order to display the grid, we need some function to count the bombs nearby a given space
 countbombs grid (x,y) = (countThree grid (x,(y-1))) + (countAtX grid ((x-1),y)) + (countThree grid (x,(y+1))) + (countAtX grid ((+1),y))
@@ -163,7 +172,7 @@ countbombs grid (x,y) = (countThree grid (x,(y-1))) + (countAtX grid ((x-1),y)) 
 countAtX :: [[Int]] -> (Int, Int) -> Int
 countAtX [] (x, y)  = 0
 countAtX (first:rest) (x, y)
-	| (x < = 0) || (y <= 0) = 0
+    |((x <= 0) || (y <= 0)) = 0
     |y == 1 = (countAtXHelper first x)
     |otherwise = 0 + (find_replace rest (x, (y-1)))
 
@@ -179,3 +188,4 @@ countAtXHelper (first:rest) x
 -- countThree does this for us by calling CountAtX three times
 countThree :: [[Int]] -> (Int, Int) -> Int    
 countThree grid (x,y) = (countAtX grid ((x-1), y)) + (countAtX grid ((x), y)) + (countAtX grid ((x+1), y))
+--}
