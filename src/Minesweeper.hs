@@ -5,7 +5,7 @@ module Minesweeper
     ) where
 
 import System.Random
-import Data.Maybe
+import Data.Char
 
 data State = State InternalState        -- the state of the game is the
          deriving (Ord, Eq)--, Show)             -- internal state of the game
@@ -33,7 +33,7 @@ type InternalState = [[Int]]
 
 -- this ensures users do not have access to the internal state --i'm still on the fence about overriding show, might not be necessary
 instance Show State where
-    show (State ins) = show (showhelper ins)
+    show (State ins) = show (showhelper (showhelper2 ins))
     
 -- the game is over when all the 1's are replaced with 4's and there are
 -- no more 2's
@@ -46,11 +46,28 @@ bombCleared = 5         -- mine, cleared (loss condition)
 
 showhelper :: [[Int]] -> [[Char]] -- converts internal state to concealed external state
 showhelper [] = []
-showhelper (first:rest) = (map
-    (\ a -> if a == empty || a == mine then  'B'               -- not clicked
-        else if a == emptyFlagged || a == bombFlagged then 'F' -- flagged
-        else '2')                                              -- clicked (replace with count bombs once implemented)
-    first):showhelper rest
+showhelper (first:rest) = (map intToDigit first):showhelper rest
+    
+showhelper2 :: [[Int]] -> [[Int]]
+showhelper2 [] = []
+showhelper2 (first:rest) =
+    let
+        width = (length first)
+        height = ((length rest)+1)
+    in
+        showhelper3 (first:rest) 1 1 width height
+
+showhelper3 lst a b x y
+    | a == x && b == y  = new_grid
+    | a == x            = showhelper3 new_grid 1 (b+1) x y
+    | otherwise         = showhelper3 new_grid (x+1) b x y
+        where
+            init = find lst a b
+            to_replace = if (init == empty || init == mine) then 11
+                         else if (init == emptyFlagged || init == bombFlagged) then 15
+                         else countbombs lst (a, b)
+            new_grid = find_replace lst x y to_replace
+
 
 -- a small grid for testing purposes, feel free to design your own
 
@@ -151,9 +168,9 @@ loss (first:rest)
     |otherwise = loss rest
 
 -- I think this might be more efficient but I'm not 100% sure
-countbombsAlt :: [[Int]] -> (Int, Int) -> Int
-countbombsAlt [] _ = 0
-countbombsAlt (first:rest) (x, y) =
+countbombs :: [[Int]] -> (Int, Int) -> Int
+countbombs [] _ = 0
+countbombs (first:rest) (x, y) =
     let
         neighbors = [(x-1, y),(x+1, y),(x-1, y-1),(x, y-1),(x+1,y-1),(x-1, y+1),(x, y+1),(x+1,y+1)]
         neighborsfilter = filter (\ (a,b) -> (a > 0) && (a <= (length first)) && b > 0 && (b <= (1+(length rest)))) neighbors
