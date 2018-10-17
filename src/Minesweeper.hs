@@ -97,13 +97,13 @@ gridmaphelper x y lst =
 -- find_replace takes a grid, an x,y coordinate, and the number to replace
 -- the number located at said coordinate. It returns the updated grid
 
-find_replace :: InternalState -> Int -> Int -> Int -> InternalState
+find_replace :: [[t]] -> Int -> Int -> t -> [[t]]
 find_replace [] x y c = []
 find_replace (first:rest) x y c
     |y == 1 = (find_replace_helper first x c) : rest
     |otherwise = first : find_replace rest x (y-1) c
 
-find_replace_helper :: [Int] -> Int -> Int -> [Int]
+find_replace_helper :: [t] -> Int -> t -> [t]
 find_replace_helper [] x c = []
 find_replace_helper (first:rest) x c
     |x == 1 = c : rest
