@@ -29,16 +29,6 @@ data Click = LeftClick  --click
 newtype UserAction = UserAction (Int, Int, Click)
     deriving (Eq) --Do we need this?
 
-readMaybeUA :: String -> Maybe UserAction
-readMaybeUA (a:b:c:[])
-    |(x == Nothing || y == Nothing || (c /= 'c' && c /= 'f')) = Nothing
-    | c == 'c' = Just (UserAction (fromJust x, fromJust y, LeftClick))
-    | otherwise = Just (UserAction (fromJust x, fromJust y, LeftClick))
-        where
-            x = (readMaybe [a] :: Maybe Int)
-            y = (readMaybe [b] :: Maybe Int)
-readmaybeUA _ = Nothing
-
 -- an internal state is the minesweeper grid as described below
 type InternalState = [[Int]]
 
@@ -83,7 +73,7 @@ play (State grid) size mines tourn = do
     case c of 
         LeftClick -> putStrLn ("Checking for a mine at " ++ show x ++ " and " ++ show y)
         RightClick -> putStrLn ("Flagging space at " ++ show x ++ " and " ++ show y)
-    let newMines = if c == LeftClick then (mines-1) else mines
+    let newMines = if c == RightClick then (mines-1) else mines
     let res = minesweeper (UserAction (x,y,c)) (State grid)
     case res of
         EndOfGame val -> (playAgain val tourn)
@@ -279,3 +269,13 @@ find_replace_helper (first:rest) x c
 
 find :: InternalState -> Int -> Int -> Int
 find lst x y = (lst!!(y-1))!!(x-1)
+
+readMaybeUA :: String -> Maybe UserAction
+readMaybeUA (a:b:c:[])
+    |(x == Nothing || y == Nothing || (c /= 'c' && c /= 'f')) = Nothing
+    | c == 'c' = Just (UserAction (fromJust x, fromJust y, LeftClick))
+    | otherwise = Just (UserAction (fromJust x, fromJust y, RightClick))
+        where
+            x = (readMaybe [a] :: Maybe Int)
+            y = (readMaybe [b] :: Maybe Int)
+readMaybeUA _ = Nothing
