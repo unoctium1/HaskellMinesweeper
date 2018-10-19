@@ -14,6 +14,8 @@ type Game = UserAction -> State -> Result
 
 type Player = State -> UserAction
 
+type TournamentState = (Int, Int) -- wins, losses
+
 -- =====================================================================
 -----------------Minesweeper Game --------------------------------------
 -- =====================================================================
@@ -50,7 +52,7 @@ bombFlagged = 4         -- mine, flagged
 bombCleared = 5         -- mine, cleared (loss condition)
 
 -- =====================================================================
--- TITLE CARD AND GAME INSTANCIATION
+-- TITLE CARD AND GAME INSTANTIATION
 -- Queries user for grid size and number of mines, then starts game
 -- =====================================================================
 
@@ -72,8 +74,8 @@ main = do
 -- Queries user for a move, then updates the game accordingly
 -- TODO: functions for input and updating game
 -- =====================================================================
-play :: State -> Int -> Int -> IO
-play (State grid) size mines = do
+play :: State -> Int -> Int -> TournamentState -> IO TournamentState
+play (State grid) size mines tourn = do
     printGrid grid
     putStrLn ("  Mines left: " + mines)
     putStrLn ("  Please choose a square by inputting an x coordinate, a y coordinate and click or flag. Eg. 12c, 45f")
@@ -84,18 +86,19 @@ play (State grid) size mines = do
     let newMines = if c == LeftClick then (mines-1) else mines
     let res = minesweeper (UserAction (x,y,c)) (State grid)
     case res of
-        EndOfGame val -> playAgain val
-        ContinueGame st -> play st size newMines
+        EndOfGame val -> return (playAgain val tourn)
+        ContinueGame st -> return (play st size newMines)
        
 -- =====================================================================
 -- Play Again
 -- Queries user if they would like to play again
 -- =====================================================================
-playAgain :: Double -> IO
-playAgain val size mines = do
+playAgain :: Double -> TournamentState -> IO TournamentState
+playAgain val size mines (wins,losses) = do
     case val of 
         1 -> putStrLn ("You win!")
         0 -> putStrLn ("You lose!")
+    let newTourn = if val == 1 then (wins+1, losses) else (wins, losses+1)
     putStrLn("Play again? y/n")
     line <- getLine
     if (line == "y")
@@ -107,9 +110,10 @@ playAgain val size mines = do
             numMines <- getLine
             let mines = read numMines
             grid <- makeGrid s mines
-            play grid s mines
+            return (play grid s mines newTourn)
         else
             putStrLn "  Thank you for playing!"
+            return newTourn
     
 -- =====================================================================
 -- General game logic
@@ -125,7 +129,7 @@ minesweeper (UserAction (x,y,c)) (State (grid))
             to_replace = if (init == empty && c == LeftClick) then emptyCleared
                          else if (init == empty) then emptyFlagged
                          else if (init == mine && c == LeftClick) then bombCleared
-                         else if (init == mine) then mineFlagged
+                         else if (init == mine) then bombFlagged
                          else if (init == emptyFlagged && c == LeftClick) then empty
                          else if (init == bombFlagged && c == LeftClick) then mine
                          else init
@@ -134,7 +138,6 @@ minesweeper (UserAction (x,y,c)) (State (grid))
 -- =====================================================================
 -- Read user action
 -- Queries user for a move, then updates the game accordingly
--- TODO: functions for input and updating game
 -- =====================================================================
 readUA :: IO String -> IO UserAction
 readUA str =
