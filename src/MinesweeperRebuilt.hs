@@ -7,8 +7,8 @@ data State = State InternalState        -- the state of the game is the
          deriving (Ord, Eq)--, Show)    -- internal state of the game
 
 data Result = EndOfGame Double                  -- end of game, value
-            | ContinueGame InternalState        -- continue with new state
-         deriving (Eq, Show)
+            | ContinueGame State        -- continue with new state
+         deriving (Eq)
 
 type Game = UserAction -> State -> Result
 
@@ -67,7 +67,7 @@ main = do
     numMines <- getLine
     let mines = read numMines
     grid <- makeGrid s mines
-    play grid s mines
+    play (State grid) s mines (0,0)
 
 -- =====================================================================
 -- MAIN GAME LOOP
@@ -77,17 +77,17 @@ main = do
 play :: State -> Int -> Int -> TournamentState -> IO TournamentState
 play (State grid) size mines tourn = do
     printGrid grid
-    putStrLn ("  Mines left: " + mines)
+    putStrLn ("  Mines left: " ++ show mines)
     putStrLn ("  Please choose a square by inputting an x coordinate, a y coordinate and click or flag. Eg. 12c, 45f")
-    (UserAction (x,y,c)) <- readUA getLine
+    (UserAction (x,y,c)) <- readUA
     case c of 
-        LeftClick -> putStrLn ("Checking for a mine at " + x + " and " + y)
-        RightClick -> putStrLn ("Flagging space at " + x + " and " + y)
+        LeftClick -> putStrLn ("Checking for a mine at " ++ show x ++ " and " ++ show y)
+        RightClick -> putStrLn ("Flagging space at " ++ show x ++ " and " ++ show y)
     let newMines = if c == LeftClick then (mines-1) else mines
     let res = minesweeper (UserAction (x,y,c)) (State grid)
     case res of
-        EndOfGame val -> return (playAgain val tourn)
-        ContinueGame st -> return (play st size newMines)
+        EndOfGame val -> (playAgain val tourn)
+        ContinueGame st -> (play st size newMines)
        
 -- =====================================================================
 -- Play Again
@@ -110,8 +110,9 @@ playAgain val size mines (wins,losses) = do
             numMines <- getLine
             let mines = read numMines
             grid <- makeGrid s mines
-            return (play grid s mines newTourn)
-        else
+            toReturn <- play (State grid) s mines newTourn
+			return toReturn
+        else do
             putStrLn "  Thank you for playing!"
             return newTourn
     
@@ -139,17 +140,16 @@ minesweeper (UserAction (x,y,c)) (State (grid))
 -- Read user action
 -- Queries user for a move, then updates the game accordingly
 -- =====================================================================
-readUA :: IO String -> IO UserAction
-readUA str =
+readUA =
     do
-        line <- str
+        line <- getLine
         let ua = readMaybeUA line
         if ua == Nothing
-            then
+            then do
                 putStrLn ("Please enter a valid coordinate and command!")
-                return readUA
-            else
-                return fromJust ua
+                readUA
+            else do
+                return (fromJust ua)
 
 -- =====================================================================
 -- Win condition
@@ -217,8 +217,8 @@ getSpace space
 -- =====================================================================
 
 -- assembles an InternalState from a grid size and a number of mines
-makeGrid :: Int -> Int -> IO State
-makeGrid gridSize numMines = State (populateGrid (makeGridHelper gridSize gridSize) gridSize numMines)
+makeGrid :: Int -> Int -> IO InternalState
+makeGrid gridSize numMines = populateGrid (makeGridHelper gridSize gridSize) gridSize numMines
 
 -- helper function which assembles lists into a list of lists
 makeGridHelper :: Int -> Int -> InternalState
