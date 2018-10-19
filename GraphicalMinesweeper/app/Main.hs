@@ -52,7 +52,7 @@ mkMine label =
       btn <- buttonNew
       set btn [ buttonLabel := label ]
       return btn
-      
+ {--    
 play :: Game -> Result -> TournammentState -> IO TournammentState
 play game start tournament_state =
   let (wins, losses) = tournament_state in
@@ -87,3 +87,4 @@ person_play game (ContinueGame state) tournament_state =
            person_play game (ContinueGame state) tournament_state
         else
            person_play game (game (fromJust action) state) tournament_state
+           --}
