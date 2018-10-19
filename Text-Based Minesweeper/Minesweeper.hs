@@ -107,7 +107,7 @@ minesweeper :: Game
 minesweeper (UserAction (x,y,c)) (State (grid))
     | to_replace == bombCleared                 = EndOfGame 0    -- did we loose?
     | win new_grid                              = EndOfGame 1    -- did we win?
-    | otherwise                                 = ContinueGame (State new_grid)
+    | otherwise                                 = if boolToExplode then ContinueGame (State (explode new_grid (x,y))) else ContinueGame (State new_grid)
         where
             init = find grid x y
             to_replace = if (init == empty && c == LeftClick) then emptyCleared
@@ -118,6 +118,7 @@ minesweeper (UserAction (x,y,c)) (State (grid))
                          else if (init == bombFlagged && c == LeftClick) then mine
                          else init
             new_grid = find_replace grid x y to_replace
+            boolToExplode = to_replace == emptyCleared && (countbombs new_grid (x,y)) == 0
 
 -- =====================================================================
 -- Read user action
@@ -160,6 +161,25 @@ win [] = True
 win (first:rest)
     |elem mine first || elem emptyFlagged first = False
     |otherwise = True && win rest 
+    
+-- =====================================================================
+-- Given an (x,y) coordinate, recursively explodes for all cells where count bombs is 0
+-- Returns true if no spaces are emptyFlagged or mines
+-- =====================================================================
+explode :: InternalState -> (Int, Int) -> InternalState
+explode [] _ = []
+explode (first:rest) (x, y) =
+    let
+        neighbors = [(x-1, y),(x+1, y),(x-1, y-1),(x, y-1),(x+1,y-1),(x-1, y+1),(x, y+1),(x+1,y+1)]
+        neighborsfilter = filter (\ (a,b) -> (a > 0) && (a <= (length first)) && b > 0 && (b <= (1+(length rest)))) neighbors
+        neighborsfilter2 = filter (\ (a,b) -> (find (first:rest) a b) == 0) neighborsfilter
+    in
+        explodehelper (first:rest) neighborsfilter2
+        
+explodehelper st [] = st
+explodehelper st ((x,y):rst)
+    | countbombs st (x,y) == 0      =   explodehelper (explode (find_replace st x y emptyCleared) (x,y)) rst
+    | otherwise                     =   explodehelper (find_replace st x y emptyCleared) rst                
 
 -- =====================================================================
 -- Given an (x,y) coordinate, returns the number of bombs at the space
