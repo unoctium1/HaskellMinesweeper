@@ -87,14 +87,14 @@ play (State grid) size mines tourn = do
     let res = minesweeper (UserAction (x,y,c)) (State grid)
     case res of
         EndOfGame val -> (playAgain val tourn)
-        ContinueGame st -> (play st size newMines)
+        ContinueGame st -> (play st size newMines tourn)
        
 -- =====================================================================
 -- Play Again
 -- Queries user if they would like to play again
 -- =====================================================================
 playAgain :: Double -> TournamentState -> IO TournamentState
-playAgain val size mines (wins,losses) = do
+playAgain val (wins,losses) = do
     case val of 
         1 -> putStrLn ("You win!")
         0 -> putStrLn ("You lose!")
@@ -110,8 +110,7 @@ playAgain val size mines (wins,losses) = do
             numMines <- getLine
             let mines = read numMines
             grid <- makeGrid s mines
-            toReturn <- play (State grid) s mines newTourn
-			return toReturn
+            play (State grid) s mines newTourn
         else do
             putStrLn "  Thank you for playing!"
             return newTourn
