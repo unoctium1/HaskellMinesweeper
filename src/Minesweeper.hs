@@ -149,8 +149,6 @@ play internalGrid =
 	internalGrid
 
 
-
-
 --TODO: Flesh out the win and loss conditions for the game, for example
 -- we should loose if we click on a mine or run out of moves/time
 
@@ -160,6 +158,38 @@ play internalGrid =
 --TODO: Create a graphical representation of the mine grid
 
 -- we win if all the 1's are gone, and there are no 2s
+
+printBoard :: [[Int]] -> Bool -> IO ()
+printBoard board gg = do
+    putStrLn "    1  2  3  4  5  6  7  8"
+    putStrLn "  +────────────────────────+"
+    sequence (mapWithBoardAndRow printRow board board gg)
+    putStrLn "  +────────────────────────+"
+    putStrLn "    1  2  3  4  5  6  7  8"
+
+printRow :: [Int] -> (Int, [[Int]], Bool) -> IO ()
+printRow row (index, board, gg)
+  | index == 0 = do
+    putStr ([chr (ord 'a' + index)] ++ " |")
+    sequence (mapWithBoardAndCell printCell row index board gg)
+    putStrLn "|"
+  | index == boardSize - 1 = do
+    putStr ([chr (ord 'a' + index)] ++ " |")
+    sequence (mapWithBoardAndCell printCell row index board gg)
+    putStrLn "|"
+  | otherwise = do
+    putStr ([chr (ord 'a' + index)] ++ " │")
+    sequence (mapWithBoardAndCell printCell row index board gg)
+    putStrLn "│"
+
+printCell :: Int -> (Int, Int, [[Int]], Bool) -> IO ()
+printCell cell (col, row, board, gg)
+  | gg && (cell == mine || cell == mineFlagged) = putStr " ✘ "
+  | cell == emptyFlagged || cell == mineFlagged = putStr " ⚑ "
+  | cell == empty || cell == mine = putStr " ■ "
+  | cell == emptyCleared && (numAdjacentBombs row col board) == 0 = putStr "   "
+  | otherwise = putStr (" " ++ show (numAdjacentBombs row col board) ++ " ")
+
 
 win :: [[Int]] -> Bool
 win [] = True
