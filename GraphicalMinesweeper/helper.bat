@@ -1,7 +1,10 @@
 @echo off
 
-cd C:\Users\Unoct\Desktop\HaskellMinesweeper\GraphicalMinesweeper
-
 stack build
+
+pause
+
 stack install
 MinesweeperHS-exe
+
+pause
