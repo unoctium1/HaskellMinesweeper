@@ -3,9 +3,9 @@ import Data.Maybe
 import Data.Char
 
 data State = State InternalState        -- the state of the game is the
-         deriving (Ord, Eq)--, Show)             -- internal state of the game
+         deriving (Ord, Eq)--, Show)    -- internal state of the game
 
-data Result = EndOfGame Double    -- end of game, value, starting state
+data Result = EndOfGame Double                  -- end of game, value
             | ContinueGame InternalState        -- continue with new state
          deriving (Eq, Show)
 
@@ -13,7 +13,10 @@ type Game = UserAction -> State -> Result
 
 type Player = State -> UserAction
 
+-- =====================================================================
 -----------------Minesweeper Game --------------------------------------
+-- =====================================================================
+
 data Click = LeftClick  --click
             |RightClick --flag?
         deriving (Eq)
@@ -35,6 +38,11 @@ emptyCleared = 3        -- empty space, cleared over the course of the game
 bombFlagged = 4         -- mine, flagged
 bombCleared = 5         -- mine, cleared (loss condition)
 
+-- =====================================================================
+-- TITLE CARD AND GAME INSTANCIATION
+-- Queries user for grid size and number of mines, then starts game
+-- =====================================================================
+
 main = do
 	putStrLn "  +───────────────────────+"
 	putStrLn "  | M I N E S W E E P E R |"
@@ -48,9 +56,19 @@ main = do
 	grid <- makeGrid s mines
 	play grid s mines
 
+-- =====================================================================
+-- MAIN GAME LOOP
+-- Queries user for a move, then updates the game accordingly
+-- TODO: functions for input and updating game
+-- =====================================================================
+
 play grid size mines = do
 	printGrid grid
 	putStrLn "  Please choose a square by inputting an x coordinate, a y coordinate and click or flag. Eg. 12c, 45f"
+
+-- =====================================================================
+-- GRID DISPLAY FUNCTIONS
+-- =====================================================================
 
 printGrid :: InternalState -> IO ()
 printGrid grid = do
@@ -92,7 +110,10 @@ getSpace space
 	| space == bombCleared = "B"
 	| otherwise = "0"
 
--- makeGrid takes a grid size and a number of mines and returns an internal state with randomly distributed mines    
+-- =====================================================================
+-- GRID GENERATION FUNCTIONS
+-- =====================================================================
+    
 makeGrid :: Int -> Int -> IO InternalState
 makeGrid gridSize numMines = populateGrid (makeGridHelper gridSize gridSize) gridSize numMines
 
@@ -130,8 +151,10 @@ hasBombHelper (first:rest) x
 	|x == 1 = if (first == 1) then True else False
 	|otherwise = hasBombHelper rest (x-1)
 			
--- note: find_replace uses 1 indexing and (1,1) is the top left corner of the grid
--- if 1 indexing proves really inconvenient we can reformat
+
+-- =====================================================================
+-- HELPER FUNCTIONS
+-- =====================================================================
 
 -- find_replace takes a grid, an x,y coordinate, and the number to replace
 -- the number located at said coordinate. It returns the updated grid
