@@ -88,7 +88,6 @@ playAgain grid val (wins,losses) = do
     putStrLn ("You have won " ++ (show (fst newTourn)) ++ " games and lost " ++ (show (snd newTourn)) ++ " games")
     putStrLn("Play again? y/n")
     putStrLn("Current tournament: "++show(newTourn)++" Play again? y/n")
-    putStrLn("Current tournament: "++show(newTourn)++" Play again? y/n")
     line <- getLine
     if (line == "y")
         then do
