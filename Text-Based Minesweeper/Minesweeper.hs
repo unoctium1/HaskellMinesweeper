@@ -146,7 +146,7 @@ getGridIO =
         case ((readMaybe size :: Maybe Int),(readMaybe numMines :: Maybe Int)) of
             (Nothing, _) -> redo
             (_, Nothing) -> redo
-            (Just size, Just mines) -> return (size,mines)
+            (Just size, Just mines) -> if mines > (size*size) then redo else return (size,mines)
            where redo = do 
                             putStrLn("  Please enter a valid size and number of mines!")
                             getGridIO
