@@ -65,11 +65,25 @@ main = do
 play grid size mines = do
 	printGrid grid
 	putStrLn "  Please choose a square by inputting an x coordinate, a y coordinate and click or flag. Eg. 12c, 45f"
+	action <- getLine
+	if ((length action) == 3)
+		then do
+			let xCoord = head action
+			let yCoord = action !! 1
+			let click = last action
+			let actionSpace = find grid (read [xCoord]) (read [yCoord])
+			putStrLn ("  Checking for a mine at " ++ [xCoord] ++ "," ++ [yCoord])
+			
+		else
+			putStrLn "  Sorry, please enter a valid coordinate and command"
+	printGrid grid
 
 -- =====================================================================
 -- GRID DISPLAY FUNCTIONS
 -- =====================================================================
 
+-- prints the grid of the game, adding x and y axes and concealing the
+-- locations of remaining mines while displaying flags and cleared areas
 printGrid :: InternalState -> IO ()
 printGrid grid = do
 	let size = length grid
@@ -80,10 +94,12 @@ printGrid grid = do
 	let bottom = "  +──" ++ (getTopper (head grid)) ++ "─+"
 	putStrLn bottom
 
+-- builds an x axis for the board
 getTopper :: [Int] -> String
 getTopper [] = []
 getTopper (first:rest) = (getTopper rest) ++ (show (length (first:rest))) ++ "─"
 
+-- builds a string of the entire board and the y axis of the board
 getBoard :: InternalState -> Int -> Int -> String
 getBoard [] index size = []
 getBoard (first:rest) index size
@@ -97,10 +113,13 @@ getBoard (first:rest) index size
 		let row = (show (size - index + 1)) ++ " |  " ++ (getRow first) ++ " |\n" ++ (getBoard rest (index - 1) size)
 		row
 
+-- generates each row to be assembled by getBoard
 getRow :: [Int] -> String
 getRow [] = []
 getRow (first:rest) = (getSpace first) ++ " " ++ (getRow rest)
 
+-- generates each space, concealing hidden information from the player
+-- which is then assembled by getRow
 getSpace :: Int -> String
 getSpace space
 	| space == mine = "0"
@@ -114,18 +133,22 @@ getSpace space
 -- GRID GENERATION FUNCTIONS
 -- =====================================================================
     
+-- assembles an InternalState from a grid size and a number of mines
 makeGrid :: Int -> Int -> IO InternalState
 makeGrid gridSize numMines = populateGrid (makeGridHelper gridSize gridSize) gridSize numMines
 
+-- helper function which assembles lists into a list of lists
 makeGridHelper :: Int -> Int -> InternalState
 makeGridHelper 0 x = []
 makeGridHelper y x = (makeRow x) : (makeGridHelper (y-1) x)
 
+-- helper function which builds lists of int
 makeRow :: Int -> [Int]
 makeRow 0 = []
 makeRow x = 0 : makeRow (x-1)
 
 
+-- function which adds a number of mines to the grid
 populateGrid :: InternalState -> Int -> Int -> IO InternalState
 populateGrid grid gridSize 0 = do
 	return grid
@@ -139,6 +162,7 @@ populateGrid grid gridSize numMines =
 			then populateGrid grid gridSize numMines
 			else populateGrid (find_replace grid randomX randomY 1) gridSize (numMines - 1)
 			
+-- returns true if there is a bomb at x,y
 hasBomb :: InternalState -> Int -> Int -> Bool
 hasBomb grid x 0 = False
 hasBomb (first:rest) x y
