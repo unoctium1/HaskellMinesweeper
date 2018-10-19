@@ -89,7 +89,7 @@ playAgain val (wins,losses) = do
         1 -> putStrLn ("You win!")
         0 -> putStrLn ("You lose!")
     let newTourn = if val == 1 then (wins+1, losses) else (wins, losses+1)
-    putStrLn("Play again? y/n")
+    putStrLn("Current tournament: "++show(newTourn)++" Play again? y/n")
     line <- getLine
     if (line == "y")
         then do
