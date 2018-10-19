@@ -63,8 +63,7 @@ play :: State -> Int -> Int -> TournamentState -> IO TournamentState
 play (State grid) size mines tourn = do
     printGrid grid
     putStrLn ("  Mines left: " ++ show mines)
-    putStrLn ("  Please choose a square by inputting an x coordinate, a y coordinate and click or flag. Eg. 12c, 45f")
-    (UserAction (x,y,c)) <- readUA
+    (UserAction (x,y,c)) <- readUA size
     case c of 
         LeftClick -> putStrLn ("Checking for a mine at " ++ show x ++ " and " ++ show y)
         RightClick -> putStrLn ("Flagging space at " ++ show x ++ " and " ++ show y)
@@ -124,17 +123,18 @@ minesweeper (UserAction (x,y,c)) (State (grid))
 -- Read user action
 -- Queries user for a move, then updates the game accordingly
 -- =====================================================================
-readUA :: IO UserAction
-readUA =
+readUA :: Int -> IO UserAction
+readUA size =
     do
+        putStrLn ("  Please choose a square by inputting an x coordinate, a y coordinate and click or flag. Eg. 1,2,c, 4,5,f, 10,15,f")
         line <- getLine
         let ua = readMaybeUA line
-        if ua == Nothing
-            then do
-                putStrLn ("Please enter a valid coordinate and command!")
-                readUA
-            else do
-                return (fromJust ua)
+        case ua of
+            Nothing -> redo
+            Just (UserAction (x,y,c)) -> if (x > size) || (y > size) || (x < 0) || (y < 0) then redo else return (UserAction (x,y,c))
+          where redo = do 
+                        putStrLn ("Please enter a valid coordinate and command!")
+                        readUA size 
                 
 getGridIO :: IO (Int, Int)
 getGridIO = 
@@ -297,11 +297,17 @@ find :: InternalState -> Int -> Int -> Int
 find lst x y = (lst!!(y-1))!!(x-1)
 
 readMaybeUA :: String -> Maybe UserAction
-readMaybeUA (a:b:c:[])
-    |(x == Nothing || y == Nothing || (c /= 'c' && c /= 'f')) = Nothing
-    | c == 'c' = Just (UserAction (fromJust x, fromJust y, LeftClick))
+readMaybeUA str
+    |(x == Nothing || y == Nothing || (c /= ['c'] && c /= ['f'])) = Nothing
+    | c == ['c'] = Just (UserAction (fromJust x, fromJust y, LeftClick))
     | otherwise = Just (UserAction (fromJust x, fromJust y, RightClick))
         where
-            x = (readMaybe [a] :: Maybe Int)
-            y = (readMaybe [b] :: Maybe Int)
-readMaybeUA _ = Nothing
+            (a:b:c:[]) = splitsep (==',') str
+            x = (readMaybe a :: Maybe Int)
+            y = (readMaybe b :: Maybe Int)
+
+splitsep sep [] = [[]]
+splitsep sep (h:t)
+    | sep h = []: splitsep sep t
+    | otherwise = ((h:w):rest)
+                where w:rest = splitsep sep t
