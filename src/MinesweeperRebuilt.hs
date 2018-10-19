@@ -50,12 +50,7 @@ main = do
     putStrLn "  +───────────────────────+"
     putStrLn "  | M I N E S W E E P E R |"
     putStrLn "  +───────────────────────+"
-    putStrLn "  What size would you like the board to be?"
-    size <- getLine
-    let s = read size
-    putStrLn "  How many mines would you like?"
-    numMines <- getLine
-    let mines = read numMines
+    (s,mines) <- getGridIO
     grid <- makeGrid s mines
     play (State grid) s mines (0,0)
 
@@ -93,12 +88,7 @@ playAgain val (wins,losses) = do
     line <- getLine
     if (line == "y")
         then do
-            putStrLn "  What size would you like the board to be?"
-            size <- getLine
-            let s = read size
-            putStrLn "  How many mines would you like?"
-            numMines <- getLine
-            let mines = read numMines
+            (s,mines) <- getGridIO
             grid <- makeGrid s mines
             play (State grid) s mines newTourn
         else do
@@ -129,6 +119,7 @@ minesweeper (UserAction (x,y,c)) (State (grid))
 -- Read user action
 -- Queries user for a move, then updates the game accordingly
 -- =====================================================================
+readUA :: IO UserAction
 readUA =
     do
         line <- getLine
@@ -139,6 +130,21 @@ readUA =
                 readUA
             else do
                 return (fromJust ua)
+                
+getGridIO :: IO (Int, Int)
+getGridIO = 
+    do
+        putStrLn "  What size would you like the board to be?"
+        size <- getLine
+        putStrLn "  How many mines would you like?"
+        numMines <- getLine
+        case ((readMaybe size :: Maybe Int),(readMaybe numMines :: Maybe Int)) of
+            (Nothing, _) -> redo
+            (_, Nothing) -> redo
+            (Just size, Just mines) -> return (size,mines)
+           where redo = do 
+                            putStrLn("Please enter a valid size and number of mines!")
+                            getGridIO
 
 -- =====================================================================
 -- Win condition
