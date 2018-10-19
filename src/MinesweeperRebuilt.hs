@@ -148,7 +148,22 @@ win :: [[Int]] -> Bool
 win [] = True
 win (first:rest)
     |elem mine first || elem emptyFlagged first = False
-    |otherwise = True && win rest               
+    |otherwise = True && win rest 
+
+-- =====================================================================
+-- Given an (x,y) coordinate, returns the number of bombs at the space
+-- Returns true if no spaces are emptyFlagged or mines
+-- =====================================================================
+countbombs :: [[Int]] -> (Int, Int) -> Int
+countbombs [] _ = 0
+countbombs (first:rest) (x, y) =
+    let
+        neighbors = [(x-1, y),(x+1, y),(x-1, y-1),(x, y-1),(x+1,y-1),(x-1, y+1),(x, y+1),(x+1,y+1)]
+        neighborsfilter = filter (\ (a,b) -> (a > 0) && (a <= (length first)) && b > 0 && (b <= (1+(length rest)))) neighbors
+        mappedneighbors = map (\ (a,b) -> find (first:rest) a b) neighborsfilter
+            
+    in
+        (length (filter (\ a -> a >= bombFlagged || a == mine) mappedneighbors))    
 
 -- =====================================================================
 -- GRID DISPLAY FUNCTIONS
@@ -161,7 +176,7 @@ printGrid grid = do
     let size = length grid
     let topper = "  +──" ++ (getTopper (head grid)) ++ "─+"
     putStrLn topper
-    let board = getBoard grid size size
+    let board = getBoard grid size size grid
     putStrLn board
     let bottom = "  +──" ++ (getTopper (head grid)) ++ "─+"
     putStrLn bottom
@@ -172,34 +187,34 @@ getTopper [] = []
 getTopper (first:rest) = (getTopper rest) ++ (show (length (first:rest))) ++ "─"
 
 -- builds a string of the entire board and the y axis of the board
-getBoard :: InternalState -> Int -> Int -> String
-getBoard [] index size = []
-getBoard (first:rest) index size
+getBoard :: InternalState -> Int -> Int -> InternalState -> String
+getBoard [] index size _ = []
+getBoard (first:rest) index size ins
     |index == size = do
-        let row = "1 |  " ++ (getRow first) ++ " |\n" ++ (getBoard rest (index - 1) size)
+        let row = "1 |  " ++ (getRow first 1 1 ins) ++ " |\n" ++ (getBoard rest (index - 1) size ins)
         row
     |index == 1 = do
-        let row = (show size) ++ " |  " ++ (getRow first) ++ " |"
+        let row = (show size) ++ " |  " ++ (getRow first 1 size ins) ++ " |"
         row
     |otherwise = do
-        let row = (show (size - index + 1)) ++ " |  " ++ (getRow first) ++ " |\n" ++ (getBoard rest (index - 1) size)
+        let row = (show (size - index + 1)) ++ " |  " ++ (getRow first 1 (size-(index-1)) ins) ++ " |\n" ++ (getBoard rest (index - 1) size ins)
         row
 
 -- generates each row to be assembled by getBoard
-getRow :: [Int] -> String
-getRow [] = []
-getRow (first:rest) = (getSpace first) ++ " " ++ (getRow rest)
+getRow :: [Int] -> Int -> Int -> InternalState -> String
+getRow [] _ _ _ = []
+getRow (first:rest) x y ins = (getSpace first x y ins) ++ " " ++ (getRow rest (x+1) y ins)
 
 -- generates each space, concealing hidden information from the player
 -- which is then assembled by getRow
-getSpace :: Int -> String
-getSpace space
-    | space == mine = "0"
+getSpace :: Int -> Int -> Int -> InternalState -> String
+getSpace space x y ins
+    | space == mine = "_"
     | space == emptyFlagged = "F"
-    | space == emptyCleared = " "
+    | space == emptyCleared = show (countbombs ins (x, y))
     | space == bombFlagged = "F"
     | space == bombCleared = "B"
-    | otherwise = "0"
+    | otherwise = "_"
 
 -- =====================================================================
 -- GRID GENERATION FUNCTIONS
