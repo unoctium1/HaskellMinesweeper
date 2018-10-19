@@ -1,8 +1,4 @@
-module Minesweeper
-    ( getgrid,
-      getgridext,
-      minesweeper
-    ) where
+module Minesweeper where
 
 import System.Random
 import Data.Char
@@ -21,12 +17,12 @@ type Player = State -> UserAction
 -----------------Minesweeper Game --------------------------------------
 data Click = LeftClick  --click
             |RightClick --flag?
-        deriving (Eq)
+        deriving (Eq, Read)
 
 -- am action is a triple of an x value, a y value, and the value to be placed
 -- at said x,y location
 newtype UserAction = UserAction (Int, Int, Click)
-    deriving (Eq) --Do we need this?
+    deriving (Eq, Read) --Do we need this?
 
 -- an internal state is the minesweeper grid as described below
 type InternalState = [[Int]]
@@ -104,6 +100,44 @@ gridmaphelper x y lst =
     in
         fr:(gridmaphelper x (y-1) rst)
 
+-- makeGrid takes a grid size and a number of mines and returns an internal state with randomly distributed mines    
+makeGrid :: Int -> Int -> IO InternalState
+makeGrid gridSize numMines = populateGrid (makeGridHelper gridSize gridSize) gridSize numMines
+
+makeGridHelper :: Int -> Int -> InternalState
+makeGridHelper 0 x = []
+makeGridHelper y x = (makeRow x) : (makeGridHelper (y-1) x)
+
+makeRow :: Int -> [Int]
+makeRow 0 = []
+makeRow x = 0 : makeRow (x-1)
+
+
+populateGrid :: InternalState -> Int -> Int -> IO InternalState
+populateGrid grid gridSize 0 = do
+	return grid
+populateGrid grid gridSize numMines = 
+	do 
+		rg <- newStdGen
+		let randomX = head(randomRs (1,gridSize) rg)
+		rg2 <- newStdGen
+		let randomY = head(randomRs (1,gridSize) rg2)
+		if (hasBomb grid randomX randomY)
+			then populateGrid grid gridSize numMines
+			else populateGrid (find_replace grid randomX randomY 1) gridSize (numMines - 1)
+			
+hasBomb :: InternalState -> Int -> Int -> Bool
+hasBomb grid x 0 = False
+hasBomb (first:rest) x y
+	|y == 1 = hasBombHelper first x
+	|otherwise = hasBomb rest x (y-1)
+
+hasBombHelper :: [Int] -> Int -> Bool
+hasBombHelper grid 0 = False
+hasBombHelper (first:rest) x
+	|x == 1 = if (first == 1) then True else False
+	|otherwise = hasBombHelper rest (x-1)		
+		
 -- note: find_replace uses 1 indexing and (1,1) is the top left corner of the grid
 -- if 1 indexing proves really inconvenient we can reformat
 
@@ -167,7 +201,6 @@ loss (first:rest)
     |elem bombCleared first = True
     |otherwise = loss rest
 
--- I think this might be more efficient but I'm not 100% sure
 countbombs :: [[Int]] -> (Int, Int) -> Int
 countbombs [] _ = 0
 countbombs (first:rest) (x, y) =
@@ -179,30 +212,3 @@ countbombs (first:rest) (x, y) =
     in
         (length (filter (\ a -> a >= bombFlagged || a == mine) mappedneighbors))
 
-{-- This doesn't seem to compile
-countbombs :: [[Int]] -> (Int, Int) -> Int
--- in order to display the grid, we need some function to count the bombs nearby a given space
-countbombs grid (x,y) = (countThree grid (x,(y-1))) + (countAtX grid ((x-1),y)) + (countThree grid (x,(y+1))) + (countAtX grid ((+1),y))
-
--- countAtX returns 1 if there is a bomb at (x,y) otherwise returns 0
--- countAtX itself only operates on the grid, calling its helper on the correct row of the grid
-countAtX :: [[Int]] -> (Int, Int) -> Int
-countAtX [] (x, y)  = 0
-countAtX (first:rest) (x, y)
-    |((x <= 0) || (y <= 0)) = 0
-    |y == 1 = (countAtXHelper first x)
-    |otherwise = 0 + (find_replace rest (x, (y-1)))
-
--- helper function operates on a particular row of the grid, looking to see if there is a bomb
--- at that x value
-countAtXHelper :: [Int] -> Int -> Int
-countAtXHelper [] x = 0
-countAtXHelper (first:rest) x
-    |(x == 1) && (first == 1) = 1
-    |otherwise = 0 + (countLeftHelper rest (x-1))
-
--- to count the bombs above and below a particular x,y coordinate we need to examine 3 spaces in a row, 
--- countThree does this for us by calling CountAtX three times
-countThree :: [[Int]] -> (Int, Int) -> Int    
-countThree grid (x,y) = (countAtX grid ((x-1), y)) + (countAtX grid ((x), y)) + (countAtX grid ((x+1), y))
---}
