@@ -86,8 +86,12 @@ playAgain grid val (wins,losses) = do
         0 -> putStrLn ("You lose!")
     let newTourn = if val == 1 then (wins+1, losses) else (wins, losses+1)
 <<<<<<< HEAD
+<<<<<<< HEAD
     putStrLn ("You have won " ++ (show (fst newTourn)) ++ " games and lost " ++ (show (snd newTourn)) ++ " games")
     putStrLn("Play again? y/n")
+=======
+    putStrLn("Current tournament: "++show(newTourn)++" Play again? y/n")
+>>>>>>> 7c23bc6a1e8ea63413cee496b3559aa56711b738
 =======
     putStrLn("Current tournament: "++show(newTourn)++" Play again? y/n")
 >>>>>>> 7c23bc6a1e8ea63413cee496b3559aa56711b738
