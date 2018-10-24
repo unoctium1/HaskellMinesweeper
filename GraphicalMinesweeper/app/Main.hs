@@ -9,9 +9,11 @@ import Data.IORef
 
 data GUI = GUI {
       mainWin :: Window,
+	  winTbl :: Table,
       minesLbl :: Label,
       movesLbl :: Label,
-      mineTbl :: Fixed}
+      mineTbl :: Fixed,
+	  }
 
 main :: IO ()
 main = 
@@ -29,12 +31,18 @@ loadGlade gladepath =
 
        -- Load main window
        mw <- builderGetObject builder castToWindow "Minesweeper"
+	   win <- builderGetObject builder castToTable "WindowTable"
        minel <- builderGetObject builder castToLabel "MinesRemaining"
        movel <- builderGetObject builder castToLabel "MovesRemaining"
        table <- builderGetObject builder castToFixed "MineTable"
-       -- Load all buttons
+	   
+	   setup <- builderGetObject builder castToDialog "GameSetup"
+	   setupcont <- builderGetObject builder castToBox "SetUpContainer"
+	   optionscont <- builderGetObject builder castToBox "Options"
+	   sizeInput <- builderGetObject builder castToEntry "SizeCont"
+	   sizelabel <- builderGetObject builder castToLabel "GridSizeLabel"
 
-       return $ GUI mw minel movel table
+       return $ GUI mw win minel movel table setup
 
 connectGui gui =
     do -- When the close button is clicked, terminate GUI loop

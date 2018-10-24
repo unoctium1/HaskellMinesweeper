@@ -4,7 +4,7 @@
   <!-- interface-naming-policy project-wide -->
   <object class="GtkWindow" id="Minesweeper">
     <child>
-      <object class="GtkTable" id="table1">
+      <object class="GtkTable" id="WindowTable">
         <property name="visible">True</property>
         <property name="n_rows">3</property>
         <property name="n_columns">3</property>
@@ -49,15 +49,15 @@
     <property name="type_hint">normal</property>
     <property name="has_separator">False</property>
     <child internal-child="vbox">
-      <object class="GtkVBox" id="dialog-vbox1">
+      <object class="GtkVBox" id="SetUpContainer">
         <property name="visible">True</property>
         <property name="orientation">vertical</property>
         <property name="spacing">2</property>
         <child>
-          <object class="GtkHBox" id="hbox1">
+          <object class="GtkHBox" id="Options">
             <property name="visible">True</property>
             <child>
-              <object class="GtkVBox" id="vbox1">
+              <object class="GtkVBox" id="SizeCont">
                 <property name="visible">True</property>
                 <property name="orientation">vertical</property>
                 <child>
@@ -90,7 +90,7 @@
               </packing>
             </child>
             <child>
-              <object class="GtkVBox" id="vbox3">
+              <object class="GtkVBox" id="MineCont">
                 <property name="visible">True</property>
                 <property name="orientation">vertical</property>
                 <child>
@@ -123,7 +123,7 @@
               </packing>
             </child>
             <child>
-              <object class="GtkVBox" id="vbox2">
+              <object class="GtkVBox" id="LimitMoveCont">
                 <property name="visible">True</property>
                 <property name="orientation">vertical</property>
                 <child>
@@ -163,15 +163,16 @@
           </packing>
         </child>
         <child internal-child="action_area">
-          <object class="GtkHButtonBox" id="dialog-action_area1">
+          <object class="GtkHButtonBox" id="actionArea">
             <property name="visible">True</property>
             <property name="layout_style">end</property>
             <child>
-              <object class="GtkButton" id="Confirm Button">
-                <property name="label" translatable="yes">button</property>
+              <object class="GtkButton" id="ConfirmButton">
+                <property name="label" translatable="yes">gtk-apply</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
+                <property name="use_stock">True</property>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -189,7 +190,7 @@
       </object>
     </child>
     <action-widgets>
-      <action-widget response="0">Confirm Button</action-widget>
+      <action-widget response="0">ConfirmButton</action-widget>
     </action-widgets>
   </object>
 </interface>
