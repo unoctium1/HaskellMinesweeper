@@ -55,7 +55,7 @@ bombCleared = 5         -- mine, cleared (loss condition)
 easy = 0.3
 medium = 0.5
 hard = 0.7
-    
+
 -- =====================================================================
 -- General game logic
 -- Updates game state with user action
@@ -90,12 +90,12 @@ readUA size =
         case ua of
             Nothing -> redo
             Just (UserAction (x,y,c)) -> if (x > size) || (y > size) || (x < 0) || (y < 0) then redo else return (UserAction (x,y,c))
-          where redo = do 
+          where redo = do
                         putStrLn ("  Please enter a valid coordinate and command!")
-                        readUA size 
-                
+                        readUA size
+
 getGridIO :: IO (Int, Int)
-getGridIO = 
+getGridIO =
     do
         putStrLn "  What size would you like the board to be?"
         size <- getLine
@@ -105,12 +105,12 @@ getGridIO =
             (Nothing, _) -> redo
             (_, Nothing) -> redo
             (Just size, Just mines) -> if mines > (size*size) then redo else return (size,mines)
-           where redo = do 
+           where redo = do
                             putStrLn("  Please enter a valid size and number of mines!")
                             getGridIO
-                            
+
 getGridPresetsIO :: IO (Int, Int)
-getGridPresetsIO = 
+getGridPresetsIO =
     do
         putStrLn "  What size would you like the board to be?"
         size <- getLine
@@ -118,13 +118,13 @@ getGridPresetsIO =
         diff <- getLine
         case ((readMaybe size :: Maybe Int),diff) of
             (Nothing, _) -> redo
-            (Just s, diff) -> case (gridDifficulty (head diff) s) of 
+            (Just s, diff) -> case (gridDifficulty (head diff) s) of
                 Just x -> return x
                 Nothing -> redo
-           where redo = do 
+           where redo = do
                             putStrLn("  Please enter a valid size and difficulty!")
                             getGridPresetsIO
-           
+
 -- =====================================================================
 -- Win condition
 -- Returns true if no spaces are emptyFlagged or mines
@@ -133,8 +133,8 @@ win :: [[Int]] -> Bool
 win [] = True
 win (first:rest)
     |elem mine first || elem emptyFlagged first = False
-    |otherwise = True && win rest 
-    
+    |otherwise = True && win rest
+
 -- =====================================================================
 -- Given an (x,y) coordinate, recursively explodes for all cells where count bombs is 0
 -- Returns true if no spaces are emptyFlagged or mines
@@ -148,11 +148,11 @@ explode (first:rest) (x, y) =
         neighborsfilter2 = filter (\ (a,b) -> (find (first:rest) a b) == 0) neighborsfilter
     in
         explodehelper (first:rest) neighborsfilter2
-        
+
 explodehelper st [] = st
 explodehelper st ((x,y):rst)
     | countbombs st (x,y) == 0      =   explodehelper (explode (find_replace st x y emptyCleared) (x,y)) rst
-    | otherwise                     =   explodehelper (find_replace st x y emptyCleared) rst                
+    | otherwise                     =   explodehelper (find_replace st x y emptyCleared) rst
 
 -- =====================================================================
 -- Given an (x,y) coordinate, returns the number of bombs at the space
@@ -165,9 +165,9 @@ countbombs (first:rest) (x, y) =
         neighbors = [(x-1, y),(x+1, y),(x-1, y-1),(x, y-1),(x+1,y-1),(x-1, y+1),(x, y+1),(x+1,y+1)]
         neighborsfilter = filter (\ (a,b) -> (a > 0) && (a <= (length first)) && b > 0 && (b <= (1+(length rest)))) neighbors
         mappedneighbors = map (\ (a,b) -> find (first:rest) a b) neighborsfilter
-            
+
     in
-        (length (filter (\ a -> a >= bombFlagged || a == mine) mappedneighbors))    
+        (length (filter (\ a -> a >= bombFlagged || a == mine) mappedneighbors))
 
 -- =====================================================================
 -- GRID DISPLAY FUNCTIONS
@@ -226,7 +226,7 @@ getSpace space x y ins
 
 -- assembles an InternalState from a grid size and a number of mines
 makeGrid :: Int -> Int -> IO State
-makeGrid gridSize numMines = do 
+makeGrid gridSize numMines = do
     ins <- populateGrid (makeGridHelper gridSize gridSize) gridSize numMines
     return (State ins)
 
@@ -303,7 +303,7 @@ readMaybeUA1 (a:b:c:[])
         where
             x = (readMaybe a :: Maybe Int)
             y = (readMaybe b :: Maybe Int)
-readMaybeUA1 _ = Nothing        
+readMaybeUA1 _ = Nothing
 
 splitsep sep [] = [[]]
 splitsep sep (h:t)
@@ -311,7 +311,7 @@ splitsep sep (h:t)
     | otherwise = ((h:w):rest)
                 where w:rest = splitsep sep t
 
-getMines :: (RealFrac a, Integral b) => a -> a -> b         
+getMines :: (RealFrac a, Integral b) => a -> a -> b
 getMines size ratio = round((size*size)*ratio)
 
 gridDifficulty :: Char -> Int -> Maybe (Int, Int)
