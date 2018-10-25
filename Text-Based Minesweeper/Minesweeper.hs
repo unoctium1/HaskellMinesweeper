@@ -41,6 +41,11 @@ emptyCleared = 3        -- empty space, cleared over the course of the game
 bombFlagged = 4         -- mine, flagged
 bombCleared = 5         -- mine, cleared (loss condition)
 
+-- difficulty enumeration ratios
+easy = 0.3
+medium = 0.5
+hard = 0.7
+
 -- =====================================================================
 -- TITLE CARD AND GAME INSTANTIATION
 -- Queries user for grid size and number of mines, then starts game
@@ -355,7 +360,7 @@ getMines :: (RealFrac a, Integral b) => a -> a -> b
 getMines size ratio = round((size*size)*ratio)
 
 gridDifficulty :: Char -> Int -> Maybe (Int, Int)
-gridDifficulty 'e' s = Just (s, (getMines (fromIntegral s) 0.3))
-gridDifficulty 'm' s = Just (s, (getMines (fromIntegral s) 0.5))
-gridDifficulty 'h' s = Just (s, (getMines (fromIntegral s) 0.7))
+gridDifficulty 'e' s = Just (s, (getMines (fromIntegral s) easy))
+gridDifficulty 'm' s = Just (s, (getMines (fromIntegral s) medium))
+gridDifficulty 'h' s = Just (s, (getMines (fromIntegral s) hard))
 gridDifficulty _ s = Nothing
