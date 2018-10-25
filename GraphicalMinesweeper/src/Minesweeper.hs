@@ -8,7 +8,7 @@ import Text.Read
 data State = State InternalState        -- the state of the game is the
          deriving (Ord, Eq)--, Show)    -- internal state of the game
 
-data Result = EndOfGame Double                  -- end of game, value
+data Result = EndOfGame Double State                 -- end of game, value, endstate
             | ContinueGame State        -- continue with new state
          deriving (Eq)
 
@@ -43,6 +43,11 @@ emptyCleared = 3        -- empty space, cleared over the course of the game
 bombFlagged = 4         -- mine, flagged
 bombCleared = 5         -- mine, cleared (loss condition)
 
+-- difficulty enumeration ratios
+easy = 0.3
+medium = 0.5
+hard = 0.7
+
 -- =====================================================================
 -- TITLE CARD AND GAME INSTANTIATION
 -- Queries user for grid size and number of mines, then starts game
@@ -52,16 +57,15 @@ main = do
     putStrLn "  +───────────────────────+"
     putStrLn "  | M I N E S W E E P E R |"
     putStrLn "  +───────────────────────+"
-    (s,mines) <- getGridIO
+    (s,mines) <- getGridPresetsIO
     grid <- makeGrid s mines
     play (State grid) s mines (0,0)
---}
+
 -- =====================================================================
 -- MAIN GAME LOOP
 -- Queries user for a move, then updates the game accordingly
 -- TODO: functions for input and updating game
 -- =====================================================================
-{--
 play :: State -> Int -> Int -> TournamentState -> IO TournamentState
 play (State grid) size mines tourn = do
     printGrid grid
@@ -73,14 +77,13 @@ play (State grid) size mines tourn = do
     let newMines = if c == RightClick then (mines-1) else mines
     let res = minesweeper (UserAction (x,y,c)) (State grid)
     case res of
-        EndOfGame val -> (playAgain (find_replace grid x y 5) val tourn)
+        EndOfGame val (State st) -> (playAgain st val tourn)
         ContinueGame st -> (play st size newMines tourn)
---}      
+       
 -- =====================================================================
 -- Play Again
 -- Queries user if they would like to play again
 -- =====================================================================
-{--
 playAgain :: InternalState -> Double -> TournamentState -> IO TournamentState
 playAgain grid val (wins,losses) = do
     printGrid grid
@@ -95,7 +98,7 @@ playAgain grid val (wins,losses) = do
     line <- getLine
     if (line == "y")
         then do
-            (s,mines) <- getGridIO
+            (s,mines) <- getGridPresetsIO
             grid <- makeGrid s mines
             play (State grid) s mines newTourn
         else do
@@ -108,8 +111,8 @@ playAgain grid val (wins,losses) = do
 -- =====================================================================
 minesweeper :: Game
 minesweeper (UserAction (x,y,c)) (State (grid))
-    | to_replace == bombCleared                 = EndOfGame 0    -- did we loose?
-    | win new_grid                              = EndOfGame 1    -- did we win?
+    | to_replace == bombCleared                 = EndOfGame 0 (State new_grid)   -- did we lose?
+    | win new_grid                              = EndOfGame 1 (State new_grid)   -- did we win?
     | otherwise                                 = if boolToExplode then ContinueGame (State (explode new_grid (x,y))) else ContinueGame (State new_grid)
         where
             init = find grid x y
@@ -154,7 +157,23 @@ getGridIO =
            where redo = do 
                             putStrLn("  Please enter a valid size and number of mines!")
                             getGridIO
-
+                            
+getGridPresetsIO :: IO (Int, Int)
+getGridPresetsIO = 
+    do
+        putStrLn "  What size would you like the board to be?"
+        size <- getLine
+        putStrLn "  What difficulty would you like? (easy/medium/hard)"
+        diff <- getLine
+        case ((readMaybe size :: Maybe Int),diff) of
+            (Nothing, _) -> redo
+            (Just s, diff) -> case (gridDifficulty (head diff) s) of 
+                Just x -> return x
+                Nothing -> redo
+           where redo = do 
+                            putStrLn("  Please enter a valid size and difficulty!")
+                            getGridPresetsIO
+           
 -- =====================================================================
 -- Win condition
 -- Returns true if no spaces are emptyFlagged or mines
@@ -338,3 +357,12 @@ splitsep sep (h:t)
     | sep h = []: splitsep sep t
     | otherwise = ((h:w):rest)
                 where w:rest = splitsep sep t
+
+getMines :: (RealFrac a, Integral b) => a -> a -> b         
+getMines size ratio = round((size*size)*ratio)
+
+gridDifficulty :: Char -> Int -> Maybe (Int, Int)
+gridDifficulty 'e' s = Just (s, (getMines (fromIntegral s) easy))
+gridDifficulty 'm' s = Just (s, (getMines (fromIntegral s) medium))
+gridDifficulty 'h' s = Just (s, (getMines (fromIntegral s) hard))
+gridDifficulty _ s = Nothing

@@ -1,3 +1,15 @@
+module Minesweeper( State,
+                    Result(EndOfGame, ContinueGame),
+                    Game,
+                    Player,
+                    Click(LeftClick,RightClick),
+                    UserAction(UserAction),
+                    minesweeper,
+                    readUA,
+                    getGridPresetsIO,
+                    makeGrid,
+                    printGrid) where
+
 import System.Random
 import Data.Maybe
 import Data.Char
@@ -13,8 +25,6 @@ data Result = EndOfGame Double State                 -- end of game, value, ends
 type Game = UserAction -> State -> Result
 
 type Player = State -> UserAction
-
-type TournamentState = (Int, Int) -- wins, losses
 
 -- =====================================================================
 -----------------Minesweeper Game --------------------------------------
@@ -45,63 +55,6 @@ bombCleared = 5         -- mine, cleared (loss condition)
 easy = 0.3
 medium = 0.5
 hard = 0.7
-
--- =====================================================================
--- TITLE CARD AND GAME INSTANTIATION
--- Queries user for grid size and number of mines, then starts game
--- =====================================================================
-
-main = do
-    putStrLn "  +───────────────────────+"
-    putStrLn "  | M I N E S W E E P E R |"
-    putStrLn "  +───────────────────────+"
-    (s,mines) <- getGridPresetsIO
-    grid <- makeGrid s mines
-    play (State grid) s mines (0,0)
-
--- =====================================================================
--- MAIN GAME LOOP
--- Queries user for a move, then updates the game accordingly
--- TODO: functions for input and updating game
--- =====================================================================
-play :: State -> Int -> Int -> TournamentState -> IO TournamentState
-play (State grid) size mines tourn = do
-    printGrid grid
-    putStrLn ("  Mines left: " ++ show mines)
-    (UserAction (x,y,c)) <- readUA size
-    case c of 
-        LeftClick -> putStrLn ("Checking for a mine at " ++ show x ++ " and " ++ show y)
-        RightClick -> putStrLn ("Flagging space at " ++ show x ++ " and " ++ show y)
-    let newMines = if c == RightClick then (mines-1) else mines
-    let res = minesweeper (UserAction (x,y,c)) (State grid)
-    case res of
-        EndOfGame val (State st) -> (playAgain st val tourn)
-        ContinueGame st -> (play st size newMines tourn)
-       
--- =====================================================================
--- Play Again
--- Queries user if they would like to play again
--- =====================================================================
-playAgain :: InternalState -> Double -> TournamentState -> IO TournamentState
-playAgain grid val (wins,losses) = do
-    printGrid grid
-    case val of 
-        1 -> putStrLn ("You win!")
-        0 -> putStrLn ("You lose!")
-    let newTourn = if val == 1 then (wins+1, losses) else (wins, losses+1)
-
-    putStrLn ("You have won " ++ (show (fst newTourn)) ++ " games and lost " ++ (show (snd newTourn)) ++ " games")
-    putStrLn("Play again? y/n")
-    putStrLn("Current tournament: "++show(newTourn)++" Play again? y/n")
-    line <- getLine
-    if (line == "y")
-        then do
-            (s,mines) <- getGridPresetsIO
-            grid <- makeGrid s mines
-            play (State grid) s mines newTourn
-        else do
-            putStrLn "  Thank you for playing!"
-            return newTourn
     
 -- =====================================================================
 -- General game logic
@@ -222,8 +175,8 @@ countbombs (first:rest) (x, y) =
 
 -- prints the grid of the game, adding x and y axes and concealing the
 -- locations of remaining mines while displaying flags and cleared areas
-printGrid :: InternalState -> IO ()
-printGrid grid = do
+printGrid :: State -> IO ()
+printGrid (State grid) = do
     let size = length grid
     let topper = "  +──" ++ (getTopper (head grid)) ++ "─+"
     putStrLn topper
@@ -272,8 +225,10 @@ getSpace space x y ins
 -- =====================================================================
 
 -- assembles an InternalState from a grid size and a number of mines
-makeGrid :: Int -> Int -> IO InternalState
-makeGrid gridSize numMines = populateGrid (makeGridHelper gridSize gridSize) gridSize numMines
+makeGrid :: Int -> Int -> IO State
+makeGrid gridSize numMines = do 
+    ins <- populateGrid (makeGridHelper gridSize gridSize) gridSize numMines
+    return (State ins)
 
 -- helper function which assembles lists into a list of lists
 makeGridHelper :: Int -> Int -> InternalState
