@@ -1,0 +1,1 @@
+stack build :MinesweeperText && stack exec MinesweeperText
