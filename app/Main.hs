@@ -22,7 +22,7 @@ main :: IO ()
 main =
     do
       initGUI
-      gui <- loadGlade "src/Minesweeper1.glade"
+      gui <- loadGlade "glade/Minesweeper1.glade"
       setupDiag gui
       mainGUI
 
