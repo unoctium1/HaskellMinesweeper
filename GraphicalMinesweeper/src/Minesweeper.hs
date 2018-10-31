@@ -1,4 +1,17 @@
-module Minesweeper where
+module Minesweeper( State,
+                    Result(EndOfGame, ContinueGame),
+                    Game,
+                    Player,
+                    Click(LeftClick,RightClick),
+                    Difficulty(Easy, Medium, Hard),
+                    UserAction(UserAction),
+                    minesweeper,
+                    getGrid,
+                    gridDifficulty,
+                    makeGrid, --IO
+                    makeGridUA,
+                    printGrid, -- IO
+                    testPrint) where --IO
 
 import System.Random
 import Data.Maybe
@@ -16,11 +29,13 @@ type Game = UserAction -> State -> Result
 
 type Player = State -> UserAction
 
-type TournamentState = (Int, Int) -- wins, losses
-
 -- =====================================================================
 -----------------Minesweeper Game --------------------------------------
 -- =====================================================================
+data Difficulty = Easy
+        | Medium
+        | Hard
+    deriving (Eq,Show)
 
 data Click = LeftClick  --click
             |RightClick --flag?
@@ -48,63 +63,9 @@ easy = 0.3
 medium = 0.5
 hard = 0.7
 
--- =====================================================================
--- TITLE CARD AND GAME INSTANTIATION
--- Queries user for grid size and number of mines, then starts game
--- =====================================================================
-{--
-main = do
-    putStrLn "  +───────────────────────+"
-    putStrLn "  | M I N E S W E E P E R |"
-    putStrLn "  +───────────────────────+"
-    (s,mines) <- getGridPresetsIO
-    grid <- makeGrid s mines
-    play (State grid) s mines (0,0)
+testPrint = do
+                putStrLn("testSuccess")
 
--- =====================================================================
--- MAIN GAME LOOP
--- Queries user for a move, then updates the game accordingly
--- TODO: functions for input and updating game
--- =====================================================================
-play :: State -> Int -> Int -> TournamentState -> IO TournamentState
-play (State grid) size mines tourn = do
-    printGrid grid
-    putStrLn ("  Mines left: " ++ show mines)
-    (UserAction (x,y,c)) <- readUA size
-    case c of 
-        LeftClick -> putStrLn ("Checking for a mine at " ++ show x ++ " and " ++ show y)
-        RightClick -> putStrLn ("Flagging space at " ++ show x ++ " and " ++ show y)
-    let newMines = if c == RightClick then (mines-1) else mines
-    let res = minesweeper (UserAction (x,y,c)) (State grid)
-    case res of
-        EndOfGame val (State st) -> (playAgain st val tourn)
-        ContinueGame st -> (play st size newMines tourn)
-       
--- =====================================================================
--- Play Again
--- Queries user if they would like to play again
--- =====================================================================
-playAgain :: InternalState -> Double -> TournamentState -> IO TournamentState
-playAgain grid val (wins,losses) = do
-    printGrid grid
-    case val of 
-        1 -> putStrLn ("You win!")
-        0 -> putStrLn ("You lose!")
-    let newTourn = if val == 1 then (wins+1, losses) else (wins, losses+1)
-
-    putStrLn ("You have won " ++ (show (fst newTourn)) ++ " games and lost " ++ (show (snd newTourn)) ++ " games")
-    putStrLn("Play again? y/n")
-    putStrLn("Current tournament: "++show(newTourn)++" Play again? y/n")
-    line <- getLine
-    if (line == "y")
-        then do
-            (s,mines) <- getGridPresetsIO
-            grid <- makeGrid s mines
-            play (State grid) s mines newTourn
-        else do
-            putStrLn "  Thank you for playing!"
-            return newTourn
---}   
 -- =====================================================================
 -- General game logic
 -- Updates game state with user action
@@ -125,55 +86,20 @@ minesweeper (UserAction (x,y,c)) (State (grid))
                          else init
             new_grid = find_replace grid x y to_replace
             boolToExplode = to_replace == emptyCleared && (countbombs new_grid (x,y)) == 0
-
--- =====================================================================
--- Read user action
--- Queries user for a move, then updates the game accordingly
--- =====================================================================
-readUA :: Int -> IO UserAction
-readUA size =
-    do
-        putStrLn ("  Please choose a square by inputting an x coordinate, a y coordinate and click or flag. Eg. 1,2,c, 4,5,f, 10,15,f")
-        line <- getLine
-        let ua = readMaybeUA line
-        case ua of
-            Nothing -> redo
-            Just (UserAction (x,y,c)) -> if (x > size) || (y > size) || (x < 0) || (y < 0) then redo else return (UserAction (x,y,c))
-          where redo = do 
-                        putStrLn ("  Please enter a valid coordinate and command!")
-                        readUA size 
-                
-getGridIO :: IO (Int, Int)
-getGridIO = 
-    do
-        putStrLn "  What size would you like the board to be?"
-        size <- getLine
-        putStrLn "  How many mines would you like?"
-        numMines <- getLine
-        case ((readMaybe size :: Maybe Int),(readMaybe numMines :: Maybe Int)) of
-            (Nothing, _) -> redo
-            (_, Nothing) -> redo
-            (Just size, Just mines) -> if mines > (size*size) then redo else return (size,mines)
-           where redo = do 
-                            putStrLn("  Please enter a valid size and number of mines!")
-                            getGridIO
                             
-getGridPresetsIO :: IO (Int, Int)
-getGridPresetsIO = 
-    do
-        putStrLn "  What size would you like the board to be?"
-        size <- getLine
-        putStrLn "  What difficulty would you like? (easy/medium/hard)"
-        diff <- getLine
-        case ((readMaybe size :: Maybe Int),diff) of
-            (Nothing, _) -> redo
-            (Just s, diff) -> case (gridDifficulty (head diff) s) of 
-                Just x -> return x
-                Nothing -> redo
-           where redo = do 
-                            putStrLn("  Please enter a valid size and difficulty!")
-                            getGridPresetsIO
-           
+getGrid :: (Maybe Int) -> (Maybe Int) -> Maybe (Int, Int)
+getGrid size numMines = case (size, numMines) of 
+                             (Nothing, _) -> Nothing
+                             (_, Nothing) -> Nothing
+                             (Just s, Just m) -> if m > (s*s) then Nothing else Just (s,m)
+                             
+gridDifficulty :: (Maybe Difficulty) -> (Maybe Int) -> Maybe (Int, Int)
+gridDifficulty Nothing _ = Nothing
+gridDifficulty _ Nothing = Nothing
+gridDifficulty (Just Easy) (Just s) = getGrid (Just s) (Just (getMines (fromIntegral s) easy))
+gridDifficulty (Just Medium) (Just s) = getGrid (Just s) (Just (getMines (fromIntegral s) medium))
+gridDifficulty (Just Hard) (Just s) = getGrid (Just s) (Just (getMines (fromIntegral s) hard))
+
 -- =====================================================================
 -- Win condition
 -- Returns true if no spaces are emptyFlagged or mines
@@ -182,8 +108,8 @@ win :: [[Int]] -> Bool
 win [] = True
 win (first:rest)
     |elem mine first || elem emptyFlagged first = False
-    |otherwise = True && win rest 
-    
+    |otherwise = True && win rest
+
 -- =====================================================================
 -- Given an (x,y) coordinate, recursively explodes for all cells where count bombs is 0
 -- Returns true if no spaces are emptyFlagged or mines
@@ -197,11 +123,11 @@ explode (first:rest) (x, y) =
         neighborsfilter2 = filter (\ (a,b) -> (find (first:rest) a b) == 0) neighborsfilter
     in
         explodehelper (first:rest) neighborsfilter2
-        
+
 explodehelper st [] = st
 explodehelper st ((x,y):rst)
     | countbombs st (x,y) == 0      =   explodehelper (explode (find_replace st x y emptyCleared) (x,y)) rst
-    | otherwise                     =   explodehelper (find_replace st x y emptyCleared) rst                
+    | otherwise                     =   explodehelper (find_replace st x y emptyCleared) rst
 
 -- =====================================================================
 -- Given an (x,y) coordinate, returns the number of bombs at the space
@@ -214,9 +140,9 @@ countbombs (first:rest) (x, y) =
         neighbors = [(x-1, y),(x+1, y),(x-1, y-1),(x, y-1),(x+1,y-1),(x-1, y+1),(x, y+1),(x+1,y+1)]
         neighborsfilter = filter (\ (a,b) -> (a > 0) && (a <= (length first)) && b > 0 && (b <= (1+(length rest)))) neighbors
         mappedneighbors = map (\ (a,b) -> find (first:rest) a b) neighborsfilter
-            
+
     in
-        (length (filter (\ a -> a >= bombFlagged || a == mine) mappedneighbors))    
+        (length (filter (\ a -> a >= bombFlagged || a == mine) mappedneighbors))
 
 -- =====================================================================
 -- GRID DISPLAY FUNCTIONS
@@ -224,8 +150,8 @@ countbombs (first:rest) (x, y) =
 
 -- prints the grid of the game, adding x and y axes and concealing the
 -- locations of remaining mines while displaying flags and cleared areas
-printGrid :: InternalState -> IO ()
-printGrid grid = do
+printGrid :: State -> IO ()
+printGrid (State grid) = do
     let size = length grid
     let topper = "  +──" ++ (getTopper (head grid)) ++ "─+"
     putStrLn topper
@@ -274,8 +200,10 @@ getSpace space x y ins
 -- =====================================================================
 
 -- assembles an InternalState from a grid size and a number of mines
-makeGrid :: Int -> Int -> IO InternalState
-makeGrid gridSize numMines = populateGrid (makeGridHelper gridSize gridSize) gridSize numMines
+makeGrid :: Int -> Int -> IO State
+makeGrid gridSize numMines = do
+    ins <- populateGrid (makeGridHelper gridSize gridSize) gridSize numMines
+    return (State ins)
 
 -- helper function which assembles lists into a list of lists
 makeGridHelper :: Int -> Int -> InternalState
@@ -314,7 +242,33 @@ hasBombHelper grid 0 = False
 hasBombHelper (first:rest) x
     |x == 1 = if (first == 1) then True else False
     |otherwise = hasBombHelper rest (x-1)
+    
+-- =====================================================================
+-- GRID GENERATION FUNCTIONS - Modified version uses a UserAction as input and ensure that that UA will result in a grid wherein that action is safe
+-- =====================================================================
 
+-- assembles an InternalState from a grid size and a number of mines
+makeGridUA :: Int -> Int -> UserAction -> IO State
+makeGridUA gridSize numMines (UserAction (x, y, _)) = do
+    let neighbors = filter (\ (a,b) -> (a > 0) && (a <= gridSize ) && b > 0 && (b <= gridSize)) [(x,y),(x-1, y),(x+1, y),(x-1, y-1),(x, y-1),(x+1,y-1),(x-1, y+1),(x, y+1),(x+1,y+1)]
+    ins <- populateGridUA (makeGridHelper gridSize gridSize) gridSize numMines neighbors
+    return (State ins)
+
+-- function which adds a number of mines to the grid
+populateGridUA :: InternalState -> Int -> Int -> [(Int,Int)] -> IO InternalState
+populateGridUA grid gridSize 0 lst = do
+    return grid
+populateGridUA grid gridSize numMines lst =
+    if((gridSize * gridSize) < (length lst)) 
+        then populateGrid grid gridSize numMines
+        else do 
+                rg <- newStdGen
+                let randomX = head(randomRs (1,gridSize) rg)
+                rg2 <- newStdGen
+                let randomY = head(randomRs (1,gridSize) rg2)
+                if (hasBomb grid randomX randomY || (randomX,randomY) `elem` lst)
+                    then populateGridUA grid gridSize numMines lst
+                    else populateGridUA (find_replace grid randomX randomY 1) gridSize (numMines - 1) lst
 
 -- =====================================================================
 -- HELPER FUNCTIONS
@@ -338,31 +292,5 @@ find_replace_helper (first:rest) x c
 find :: InternalState -> Int -> Int -> Int
 find lst x y = (lst!!(y-1))!!(x-1)
 
-readMaybeUA :: String -> Maybe UserAction
-readMaybeUA [] = Nothing
-readMaybeUA str = readMaybeUA1 (splitsep (==',') str)
-
-readMaybeUA1 :: [String] -> Maybe UserAction
-readMaybeUA1 (a:b:c:[])
-    |(x == Nothing || y == Nothing || (c /= ['c'] && c /= ['f'])) = Nothing
-    | c == ['c'] = Just (UserAction (fromJust x, fromJust y, LeftClick))
-    | otherwise = Just (UserAction (fromJust x, fromJust y, RightClick))
-        where
-            x = (readMaybe a :: Maybe Int)
-            y = (readMaybe b :: Maybe Int)
-readMaybeUA1 _ = Nothing        
-
-splitsep sep [] = [[]]
-splitsep sep (h:t)
-    | sep h = []: splitsep sep t
-    | otherwise = ((h:w):rest)
-                where w:rest = splitsep sep t
-
-getMines :: (RealFrac a, Integral b) => a -> a -> b         
+getMines :: (RealFrac a, Integral b) => a -> a -> b
 getMines size ratio = round((size*size)*ratio)
-
-gridDifficulty :: Char -> Int -> Maybe (Int, Int)
-gridDifficulty 'e' s = Just (s, (getMines (fromIntegral s) easy))
-gridDifficulty 'm' s = Just (s, (getMines (fromIntegral s) medium))
-gridDifficulty 'h' s = Just (s, (getMines (fromIntegral s) hard))
-gridDifficulty _ s = Nothing
