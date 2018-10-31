@@ -2,4 +2,8 @@
 
 See https://wiki.ubc.ca/Course:CPSC312-2018-Minesweeper
 
-See text based minesweeper/Minesweeper.exe for the finished version
+Run
+  stack build :MinesweeperText && stack exec MinesweeperText
+for the text version, or run
+  stack build :Minesweeper && stack exec Minesweeper
+for the (wip) graphical version  
