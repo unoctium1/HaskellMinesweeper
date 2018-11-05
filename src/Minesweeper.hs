@@ -8,10 +8,11 @@ module Minesweeper( State,
                     minesweeper,
                     getGrid,
                     gridDifficulty,
-                    makeGrid, --IO
-                    makeGridUA,
-                    printGrid, -- IO
-                    testPrint) where --IO
+                    makeGrid,
+                    showStateEnd,
+                    showState,
+                    populateGrid, --IO
+                    populateGridUA) where --IO
 
 import System.Random
 import Data.Maybe
@@ -63,15 +64,12 @@ easy = 0.3
 medium = 0.5
 hard = 0.7
 
-testPrint = do
-                putStrLn("testSuccess")
-
 -- =====================================================================
 -- General game logic
 -- Updates game state with user action
 -- =====================================================================
 minesweeper :: Game
-minesweeper (UserAction (x,y,c)) (State (grid))
+minesweeper (UserAction (x,y,c)) (State grid)
     | to_replace == bombCleared                 = EndOfGame 0 (State new_grid)   -- did we lose?
     | win new_grid                              = EndOfGame 1 (State new_grid)   -- did we win?
     | otherwise                                 = if boolToExplode then ContinueGame (State (explode new_grid (x,y))) else ContinueGame (State new_grid)
@@ -148,62 +146,39 @@ countbombs (first:rest) (x, y) =
 -- GRID DISPLAY FUNCTIONS
 -- =====================================================================
 
--- prints the grid of the game, adding x and y axes and concealing the
--- locations of remaining mines while displaying flags and cleared areas
-printGrid :: State -> IO ()
-printGrid (State grid) = do
-    let size = length grid
-    let topper = "  +──" ++ (getTopper (head grid)) ++ "─+"
-    putStrLn topper
-    let board = getBoard grid size size grid
-    putStrLn board
-    let bottom = "  +──" ++ (getTopper (head grid)) ++ "─+"
-    putStrLn bottom
+-- Returns a state, with all bombs revealed
+showStateEnd :: State -> State
+showStateEnd (State grid) = State (showHelperEnd grid)
 
--- builds an x axis for the board
-getTopper :: [Int] -> String
-getTopper [] = []
-getTopper (first:rest) = (getTopper rest) ++ (show (length (first:rest))) ++ "─"
+showHelperEnd :: InternalState -> InternalState
+showHelperEnd lst = [(map (\ x -> if x==mine then bombCleared else x) f)|f <- lst]
 
--- builds a string of the entire board and the y axis of the board
-getBoard :: InternalState -> Int -> Int -> InternalState -> String
-getBoard [] index size _ = []
-getBoard (first:rest) index size ins
-    |index == size = do
-        let row = "1 |  " ++ (getRow first 1 1 ins) ++ " |\n" ++ (getBoard rest (index - 1) size ins)
-        row
-    |index == 1 = do
-        let row = (show size) ++ " |  " ++ (getRow first 1 size ins) ++ " |"
-        row
-    |otherwise = do
-        let row = (show (size - index + 1)) ++ " |  " ++ (getRow first 1 (size-(index-1)) ins) ++ " |\n" ++ (getBoard rest (index - 1) size ins)
-        row
+-- Returns a char array of the board as printable characters
+showState :: State -> [[Char]]
+showState (State grid) = showHelper grid 1 grid
 
--- generates each row to be assembled by getBoard
-getRow :: [Int] -> Int -> Int -> InternalState -> String
-getRow [] _ _ _ = []
-getRow (first:rest) x y ins = (getSpace first x y ins) ++ " " ++ (getRow rest (x+1) y ins)
+showHelper :: InternalState -> Int -> InternalState -> [[Char]]
+showHelper [] _ _ = []
+showHelper (f:rst) y ins = (showRow f 1 y ins):(showHelper rst (y+1) ins)
 
--- generates each space, concealing hidden information from the player
--- which is then assembled by getRow
-getSpace :: Int -> Int -> Int -> InternalState -> String
-getSpace space x y ins
-    | space == mine = "_"
-    | space == emptyFlagged = "F"
-    | space == emptyCleared = show (countbombs ins (x, y))
-    | space == bombFlagged = "F"
-    | space == bombCleared = "B"
-    | otherwise = "_"
+showRow :: [Int] -> Int -> Int -> InternalState -> [Char]
+showRow [] _ _ _ = []
+showRow (f:rst) x y ins = (showSpace f x y ins):(showRow rst (x+1) y ins)
+
+showSpace :: Int -> Int -> Int -> InternalState -> Char
+showSpace space x y ins
+    | space == emptyFlagged = 'F'
+    | space == emptyCleared = head (show (countbombs ins (x, y)))
+    | space == bombFlagged = 'F'
+    | space == bombCleared = 'B'
+    | otherwise = '_'
 
 -- =====================================================================
 -- GRID GENERATION FUNCTIONS
 -- =====================================================================
-
--- assembles an InternalState from a grid size and a number of mines
-makeGrid :: Int -> Int -> IO State
-makeGrid gridSize numMines = do
-    ins <- populateGrid (makeGridHelper gridSize gridSize) gridSize numMines
-    return (State ins)
+-- generates an empty grid of set size
+makeGrid :: Int -> State
+makeGrid size = State (makeGridHelper size size)
 
 -- helper function which assembles lists into a list of lists
 makeGridHelper :: Int -> Int -> InternalState
@@ -216,19 +191,19 @@ makeRow 0 = []
 makeRow x = 0 : makeRow (x-1)
 
 
--- function which adds a number of mines to the grid
-populateGrid :: InternalState -> Int -> Int -> IO InternalState
-populateGrid grid gridSize 0 = do
-    return grid
-populateGrid grid gridSize numMines =
+-- IO function which adds a number of mines to the grid
+populateGrid :: State -> Int -> Int -> IO State
+populateGrid (State grid) gridSize 0 = do
+    return (State grid)
+populateGrid (State grid) gridSize numMines =
     do
         rg <- newStdGen
         let randomX = head(randomRs (1,gridSize) rg)
         rg2 <- newStdGen
         let randomY = head(randomRs (1,gridSize) rg2)
         if (hasBomb grid randomX randomY)
-            then populateGrid grid gridSize numMines
-            else populateGrid (find_replace grid randomX randomY 1) gridSize (numMines - 1)
+            then populateGrid (State grid) gridSize numMines
+            else populateGrid (State (find_replace grid randomX randomY 1)) gridSize (numMines - 1)
 
 -- returns true if there is a bomb at x,y
 hasBomb :: InternalState -> Int -> Int -> Bool
@@ -246,29 +221,29 @@ hasBombHelper (first:rest) x
 -- =====================================================================
 -- GRID GENERATION FUNCTIONS - Modified version uses a UserAction as input and ensure that that UA will result in a grid wherein that action is safe
 -- =====================================================================
-
--- assembles an InternalState from a grid size and a number of mines
-makeGridUA :: Int -> Int -> UserAction -> IO State
-makeGridUA gridSize numMines (UserAction (x, y, _)) = do
-    let neighbors = filter (\ (a,b) -> (a > 0) && (a <= gridSize ) && b > 0 && (b <= gridSize)) [(x,y),(x-1, y),(x+1, y),(x-1, y-1),(x, y-1),(x+1,y-1),(x-1, y+1),(x, y+1),(x+1,y+1)]
-    ins <- populateGridUA (makeGridHelper gridSize gridSize) gridSize numMines neighbors
-    return (State ins)
-
 -- function which adds a number of mines to the grid
-populateGridUA :: InternalState -> Int -> Int -> [(Int,Int)] -> IO InternalState
-populateGridUA grid gridSize 0 lst = do
-    return grid
-populateGridUA grid gridSize numMines lst =
-    if((gridSize * gridSize) < (length lst)) 
-        then populateGrid grid gridSize numMines
-        else do 
-                rg <- newStdGen
-                let randomX = head(randomRs (1,gridSize) rg)
-                rg2 <- newStdGen
-                let randomY = head(randomRs (1,gridSize) rg2)
-                if (hasBomb grid randomX randomY || (randomX,randomY) `elem` lst)
-                    then populateGridUA grid gridSize numMines lst
-                    else populateGridUA (find_replace grid randomX randomY 1) gridSize (numMines - 1) lst
+populateGridUA :: State -> Int -> Int -> UserAction -> IO State
+populateGridUA st gridSize 0 _ = do
+    return st
+populateGridUA (State grid) gridSize numMines (UserAction (x,y,c)) =
+    if((gridSize * gridSize) < ((length lst) + numMines)) 
+        then populateGrid (State grid) gridSize numMines
+        else do
+                ins <- populateGridUAHelper grid gridSize numMines lst
+                return (State ins)
+  where lst = filter (\ (a,b) -> (a > 0) && (a <= gridSize ) && b > 0 && (b <= gridSize)) [(x,y),(x-1, y),(x+1, y),(x-1, y-1),(x, y-1),(x+1,y-1),(x-1, y+1),(x, y+1),(x+1,y+1)]   
+
+populateGridUAHelper :: InternalState -> Int -> Int -> [(Int,Int)] -> IO InternalState
+populateGridUAHelper grid _ 0 _ = do return grid
+populateGridUAHelper grid gridSize numMines lst =
+    do
+        rg <- newStdGen
+        let randomX = head(randomRs (1,gridSize) rg)
+        rg2 <- newStdGen
+        let randomY = head(randomRs (1,gridSize) rg2)
+        if (hasBomb grid randomX randomY || (randomX,randomY) `elem` lst)
+            then populateGridUAHelper grid gridSize numMines lst
+            else populateGridUAHelper (find_replace grid randomX randomY 1) gridSize (numMines - 1) lst
 
 -- =====================================================================
 -- HELPER FUNCTIONS

@@ -15,40 +15,29 @@ main = do
     putStrLn "  | M I N E S W E E P E R |"
     putStrLn "  +───────────────────────+"
     (s,mines) <- getGridPresetsIO
-    playInit s mines (0,0)
+    let st = makeGrid s
+    play st s mines (0,0) True
 
 -- =====================================================================
 -- MAIN GAME LOOP
 -- Queries user for a move, then updates the game accordingly
 -- TODO: functions for input and updating game
 -- =====================================================================
-play :: State -> Int -> Int -> TournamentState -> IO TournamentState
-play st size mines tourn = do
-    printGrid st
+play :: State -> Int -> Int -> TournamentState -> Bool -> IO TournamentState
+play stIn size mines tourn init = do
+    printGrid stIn
     putStrLn ("  Mines left: " ++ show mines)
     UserAction (x,y,c) <- readUA size
     case c of
         LeftClick -> putStrLn ("Checking for a mine at " ++ show x ++ " and " ++ show y)
         RightClick -> putStrLn ("Flagging space at " ++ show x ++ " and " ++ show y)
     let newMines = if c == RightClick then (mines-1) else mines
-    let res = minesweeper (UserAction (x,y,c)) st
+    newSt <- populateGridUA stIn size mines (UserAction (x,y,c))
+    let res = minesweeper (UserAction (x,y,c)) (if init then newSt else stIn)
     case res of
-        EndOfGame val st -> (playAgain st val tourn)
-        ContinueGame st -> (play st size newMines tourn)
+        EndOfGame val st -> (playAgain (showStateEnd st) val tourn)
+        ContinueGame st -> (play st size newMines tourn False)
 
-        
-playInit size mines tourn = do
-    putStrLn ("  Mines left: " ++ show mines)
-    UserAction (x,y,c) <- readUA size
-    grid <- makeGridUA size mines (UserAction (x,y,c))
-    case c of
-        LeftClick -> putStrLn ("Checking for a mine at " ++ show x ++ " and " ++ show y)
-        RightClick -> putStrLn ("Flagging space at " ++ show x ++ " and " ++ show y)
-    let newMines = if c == RightClick then (mines-1) else mines
-    let res = minesweeper (UserAction (x,y,c)) grid
-    case res of
-        EndOfGame val st -> (playAgain st val tourn)
-        ContinueGame st -> (play st size newMines tourn)
 -- =====================================================================
 -- Play Again
 -- Queries user if they would like to play again
@@ -68,10 +57,49 @@ playAgain grid val (wins,losses) = do
     if (line == "y")
         then do
             (s,mines) <- getGridPresetsIO
-            playInit s mines newTourn
+            let st = makeGrid s
+            play st s mines newTourn True
         else do
             putStrLn "  Thank you for playing!"
             return newTourn
+            
+
+-- prints the grid of the game, adding x and y axes and concealing the
+-- locations of remaining mines while displaying flags and cleared areas
+printGrid :: State -> IO ()
+printGrid st = do
+    let grid = showState st
+    let size = length grid
+    let topper = "  +──" ++ (getTopper (head grid)) ++ "─+"
+    putStrLn topper
+    let board = getBoard grid size size
+    putStrLn board
+    let bottom = "  +──" ++ (getTopper (head grid)) ++ "─+"
+    putStrLn bottom
+
+-- builds an x axis for the board
+getTopper :: [Char] -> String
+getTopper [] = []
+getTopper (first:rest) = (getTopper rest) ++ (show (length (first:rest))) ++ "─"
+
+-- builds a string of the entire board and the y axis of the board
+getBoard :: [[Char]] -> Int -> Int -> String
+getBoard [] index size = []
+getBoard (first:rest) index size
+    |index == size = do
+        let row = "1 |  " ++ (getRow first) ++ " |\n" ++ (getBoard rest (index - 1) size)
+        row
+    |index == 1 = do
+        let row = (show size) ++ " |  " ++ (getRow first) ++ " |"
+        row
+    |otherwise = do
+        let row = (show (size - index + 1)) ++ " |  " ++ (getRow first) ++ " |\n" ++ (getBoard rest (index - 1) size)
+        row
+
+-- generates each row to be assembled by getBoard
+getRow :: [Char] -> String
+getRow []  = []
+getRow (first:rest) = [first] ++ " " ++ (getRow rest)
 
 -- =====================================================================
 -- Read user action

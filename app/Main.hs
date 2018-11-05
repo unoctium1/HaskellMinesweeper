@@ -14,7 +14,9 @@ data GUI = GUI {
       mineTbl :: Fixed,
       setUp :: Dialog,
       sIn :: Entry,
-      mIn :: Entry,
+      easy :: RadioButton,
+      medium :: RadioButton,
+      hard :: RadioButton,
       diagConf :: Button
       }
 
@@ -22,7 +24,7 @@ main :: IO ()
 main =
     do
       initGUI
-      gui <- loadGlade "glade/Minesweeper1.glade"
+      gui <- loadGlade "glade/Minesweeper2.glade"
       setupDiag gui
       mainGUI
 
@@ -48,17 +50,19 @@ loadGlade gladepath =
 
        --mineBox <- builderGetObject builder castToBox "MineCont"
        --minelabel <- builderGetObject builder castToLabel "MineNumberLabel"
-       mineInput <- builderGetObject builder castToEntry "MineNumber"
+       --mineInput <- builderGetObject builder castToEntry "MineNumber"
+       easyButton <- builderGetObject builder castToRadioButton "easyButton"
+       medButton <- builderGetObject builder castToRadioButton "medButton"
+       hardButton <- builderGetObject builder castToRadioButton "hardButton"
 
        --buttonInput <- builderGetObject builder castToBox "actionArea"
        confirm <- builderGetObject builder castToButton "ConfirmButton"
 
-       return $ GUI mw minel movel table setup sizeInput mineInput confirm
+       return $ GUI mw minel movel table setup sizeInput easyButton medButton hardButton confirm
 
 setupDiag gui =
     do
         onDestroy (setUp gui) mainQuit
-        entrySetText (mIn gui) ""
         entrySetText (sIn gui) ""
 
         onClicked (diagConf gui) readProc
@@ -66,23 +70,48 @@ setupDiag gui =
         windowPresent (setUp gui)
       where readProc = do
                         s <- (entryGetText (sIn gui) :: IO String)
-                        m <- (entryGetText (mIn gui) :: IO String)
-                        initGame gui (getGrid (readMaybe s :: Maybe Int) (readMaybe m :: Maybe Int))
+                        diff <- getDifficulty gui
+                        initGame gui (gridDifficulty (Just diff) (readMaybe s :: Maybe Int))
 
+getDifficulty :: GUI -> IO Difficulty
+getDifficulty gui = do
+    easyBool <- toggleButtonGetActive (easy gui)
+    medBool <- toggleButtonGetActive (medium gui)
+    hardBool <- toggleButtonGetActive (hard gui)
+    if easyBool 
+        then return Easy 
+        else if medBool 
+            then return Medium 
+            else return Hard
+                        
 initGame :: GUI -> (Maybe (Int, Int)) -> IO()
 initGame gui Nothing = setupDiag gui
 initGame gui (Just (s,m)) = do
     widgetHide (setUp gui)
     onDestroy (mainWin gui) mainQuit
-    putStrLn("test success")
+    let grid = makeGrid s
+    buildGrid s gui grid
     windowPresent (mainWin gui)
+    
+buildGrid size gui st = do
+    gridTbl <- tableNew size size True
+    let attach x y st grid btn = tableAttachDefaults grid btn (x-1) x (y-1) y
+    let mkMineBtn x y st grid = mkMine st x y gui >>= attach x y st grid
+    attachHelper mkMineBtn size size size st gridTbl
+    
+    containerAdd (mineTbl gui) gridTbl
 
+attachHelper fn 1 1 _ st table = do fn 1 1 st table
+attachHelper fn 1 y x0 st table = do 
+    fn 1 y st table
+    attachHelper fn x0 (y-1) x0 st table
+attachHelper fn x y x0 st table = do
+    fn x y st table
+    attachHelper fn (x-1) y x0 st table
 
 type TournammentState = (Int,Int)   -- wins, losses
 
-mkMine :: String -> IO Button
-mkMine label =
+mkMine st x y gui =
     do
       btn <- buttonNew
-      set btn [ buttonLabel := label ]
       return btn
