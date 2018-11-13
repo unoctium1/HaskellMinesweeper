@@ -11,13 +11,18 @@ data GUI = GUI {
       mainWin :: Window,
       minesLbl :: Label,
       movesLbl :: Label,
-      mineTbl :: Fixed,
+      mineTblCont :: Box,
+      lCLick :: RadioButton,
+      rClick :: RadioButton,
       setUp :: Dialog,
       sIn :: Entry,
       easy :: RadioButton,
       medium :: RadioButton,
       hard :: RadioButton,
-      diagConf :: Button
+      diagConf :: Button,
+      errorWin :: Dialog,
+      acceptBtn :: Button,
+      cancBtn :: Button
       }
 
 main :: IO ()
@@ -38,7 +43,9 @@ loadGlade gladepath =
        --win <- builderGetObject builder castToTable "WindowTable"
        minel <- builderGetObject builder castToLabel "MinesRemaining"
        movel <- builderGetObject builder castToLabel "MovesRemaining"
-       table <- builderGetObject builder castToFixed "MineTable"
+       table <- builderGetObject builder castToBox "mineTbl"
+       radButton1 <- builderGetObject builder castToRadioButton "LClickBtn"
+       radButton2 <- builderGetObject builder castToRadioButton "RClickBtn"
 
        setup <- builderGetObject builder castToDialog "GameSetup"
        --setupcont <- builderGetObject builder castToBox "SetUpContainer"
@@ -57,8 +64,12 @@ loadGlade gladepath =
 
        --buttonInput <- builderGetObject builder castToBox "actionArea"
        confirm <- builderGetObject builder castToButton "ConfirmButton"
+       
+       errorWin <- builderGetObject builder castToDialog "ErrorBoardMsg"
+       errorConf <- builderGetObject builder castToButton "acceptBtn"
+       errorCanc <- builderGetObject builder castToButton "cancelBtn"
 
-       return $ GUI mw minel movel table setup sizeInput easyButton medButton hardButton confirm
+       return $ GUI mw minel movel table radButton1 radButton2 setup sizeInput easyButton medButton hardButton confirm errorWin errorConf errorCanc
 
 setupDiag gui =
     do
@@ -85,22 +96,33 @@ getDifficulty gui = do
             else return Hard
                         
 initGame :: GUI -> (Maybe (Int, Int)) -> IO()
-initGame gui Nothing = setupDiag gui
+initGame gui Nothing = errorWinSetup gui
+initGame gui (Just(0,_)) = errorWinSetup gui
 initGame gui (Just (s,m)) = do
     widgetHide (setUp gui)
     onDestroy (mainWin gui) mainQuit
     let grid = makeGrid s
     buildGrid s gui grid
     windowPresent (mainWin gui)
-    
+
+errorWinSetup :: GUI -> IO()
+errorWinSetup gui = do
+    onClicked (cancBtn gui) mainQuit
+    onClicked (acceptBtn gui) acceptProc
+    onDestroy (errorWin gui) acceptProc
+    windowPresent (errorWin gui)
+   where acceptProc = 
+           do
+                widgetHide (errorWin gui)
+                setupDiag gui
+
 buildGrid size gui st = do
-    gridTbl <- tableNew size size True
     let attach x y st grid btn = tableAttachDefaults grid btn (x-1) x (y-1) y
     let mkMineBtn x y st grid = mkMine st x y gui >>= attach x y st grid
-    attachHelper mkMineBtn size size size st gridTbl
+    minTbl <- tableNew size size True
+    attachHelper mkMineBtn size size size st minTbl
+    boxPackStartDefaults (mineTblCont gui) minTbl
     
-    containerAdd (mineTbl gui) gridTbl
-
 attachHelper fn 1 1 _ st table = do fn 1 1 st table
 attachHelper fn 1 y x0 st table = do 
     fn 1 y st table

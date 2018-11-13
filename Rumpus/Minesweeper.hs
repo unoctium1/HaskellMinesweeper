@@ -5,15 +5,15 @@ module Minesweeper( State,
                     Click(LeftClick,RightClick),
                     Difficulty(Easy, Medium, Hard),
                     UserAction(UserAction),
-                    minesweeper,                    -- minesweeper :: Game
-                    getGrid,                        -- getGrid :: (Maybe Int) -> (Maybe Int) -> Maybe (Int, Int)
-                    gridDifficulty,                 -- gridDifficulty :: (Maybe Difficulty) -> (Maybe Int) -> Maybe (Int, Int)
-                    makeGrid,                       -- makeGrid :: Int -> State
-                    showStateEnd,                   -- showStateEnd :: State -> State
-                    showState,                      -- showState :: State -> [[Char]]
-                    populateGrid, --IO              -- populateGrid :: State -> Int -> Int -> IO State
-                    populateGridUA  --IO            -- populateGridUA :: State -> Int -> Int -> UserAction -> IO State
-                    ) where
+                    minesweeper,					-- minesweeper :: Game
+                    getGrid,						-- getGrid :: (Maybe Int) -> (Maybe Int) -> Maybe (Int, Int)
+                    gridDifficulty,					-- gridDifficulty :: (Maybe Difficulty) -> (Maybe Int) -> Maybe (Int, Int)
+                    makeGrid,						-- makeGrid :: Int -> State
+                    showStateEnd,					-- showStateEnd :: State -> State
+                    showState,						-- showState :: State -> [[Char]]
+                    populateGrid, --IO				-- populateGrid :: State -> Int -> Int -> IO State
+                    populateGridUA	--IO			-- populateGridUA :: State -> Int -> Int -> UserAction -> IO State
+					) where
 
 import System.Random
 import Data.Maybe
@@ -61,9 +61,9 @@ bombFlagged = 4         -- mine, flagged
 bombCleared = 5         -- mine, cleared (loss condition)
 
 -- difficulty enumeration ratios
-easy = 0.3
-medium = 0.5
-hard = 0.7
+easy = 0.2
+medium = 0.3
+hard = 0.5
 
 -- =====================================================================
 -- General game logic
